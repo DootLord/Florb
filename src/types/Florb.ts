@@ -75,11 +75,11 @@ export const FlorbSchema = CreateFlorbSchema.extend({
 
 // Schema for florb generation request
 export const GenerateFlorbSchema = z.object({
-  baseImagePath: z.string().min(1, 'Base image path is required'),
+  baseImagePath: z.string().min(1, 'Base image path is required').optional(), // Optional - will pick randomly if not provided
   rarity: z.enum(RARITY_LEVELS).optional(),
   forceSpecialEffect: z.enum(SPECIAL_EFFECTS).optional(),
   customGradient: GradientConfigSchema.optional(),
-});
+}).optional().default({}); // Make the entire object optional with empty object as default
 
 // Schema for batch florb generation
 export const BatchGenerateFlorbSchema = z.object({

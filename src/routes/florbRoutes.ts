@@ -24,5 +24,6 @@ router.get('/effect/:effect', florbController.getFlorbsWithEffect);
 router.get('/stats/rarity', florbController.getRarityStats);
 router.get('/meta/rarities', florbController.getRarityLevels);
 router.get('/meta/effects', florbController.getSpecialEffects);
+router.get('/meta/base-images', florbController.getBaseImages);
 
 export default router;

@@ -39,7 +39,9 @@ export class FlorbController extends BaseController {
   // Generate a single florb
   generateFlorb = async (req: Request, res: Response): Promise<void> => {
     try {
-      const validatedData = GenerateFlorbSchema.parse(req.body);
+      // Handle empty request body by providing empty object
+      const requestData = req.body || {};
+      const validatedData = GenerateFlorbSchema.parse(requestData);
       const florb = await this.florbService.generateFlorb(validatedData);
       
       this.sendSuccess(res, florb, 'Florb generated successfully', 201);
@@ -251,6 +253,16 @@ export class FlorbController extends BaseController {
       this.sendSuccess(res, SPECIAL_EFFECTS, 'Special effects retrieved successfully');
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve special effects');
+    }
+  };
+
+  // Get available base images
+  getBaseImages = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const baseImages = await this.florbService.getBaseImagesList();
+      this.sendSuccess(res, baseImages, 'Base images retrieved successfully');
+    } catch (error) {
+      this.handleError(res, error, 'Failed to retrieve base images');
     }
   };
 }

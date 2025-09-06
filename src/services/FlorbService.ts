@@ -18,6 +18,8 @@ import type {
     RarityWeights
 } from '../types/Florb.js';
 import { randomBytes } from 'crypto';
+import { readdir } from 'fs/promises';
+import { join } from 'path';
 
 export class FlorbService {
     private collection: Collection<Florb> | null = null;
@@ -91,37 +93,45 @@ export class FlorbService {
         };
     }
 
-    // Get available base images (this would scan a directory in a real implementation)
+    // Get available base images by scanning the florb_base directory
     private async getAvailableBaseImages(): Promise<string[]> {
-        // In a real implementation, you would use fs to scan the base images directory
-        // For now, return some example paths that correspond to the structure we created
-        return [
-            'assets/base_images/crystal.png',
-            'assets/base_images/gem.png',
-            'assets/base_images/orb.png',
-            'assets/base_images/shard.png',
-            'assets/base_images/sphere.png'
-        ];
-
-        // TODO: Implement actual file scanning when images are added:
-        // import { readdir } from 'fs/promises';
-        // import { join } from 'path';
-        // 
-        // try {
-        //   const baseImageDir = join(process.cwd(), 'assets', 'base_images');
-        //   const files = await readdir(baseImageDir);
-        //   return files
-        //     .filter(file => file.match(/\.(png|jpg|jpeg)$/i))
-        //     .map(file => `assets/base_images/${file}`);
-        // } catch (error) {
-        //   console.warn('Could not read base images directory:', error);
-        //   return []; // Return empty array if directory doesn't exist or can't be read
-        // }
+        try {
+            const baseImageDir = join(process.cwd(), 'src', 'assets', 'florb_base');
+            const files = await readdir(baseImageDir);
+            const imageFiles = files
+                .filter(file => file.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/i))
+                .map(file => `src/assets/florb_base/${file}`);
+            
+            if (imageFiles.length === 0) {
+                console.warn('No image files found in florb_base directory. Using fallback images.');
+                return [
+                    'src/assets/florb_base/default_orb.png',
+                    'src/assets/florb_base/default_crystal.png'
+                ];
+            }
+            
+            console.log(`Found ${imageFiles.length} base images:`, imageFiles);
+            return imageFiles;
+        } catch (error) {
+            console.warn('Could not read florb_base directory:', error);
+            console.warn('Using fallback base images.');
+            return [
+                'src/assets/florb_base/default_orb.png',
+                'src/assets/florb_base/default_crystal.png'
+            ];
+        }
     }
 
     // Generate a single florb
     async generateFlorb(data: GenerateFlorbDto): Promise<Florb> {
         const collection = await this.getCollection();
+
+        // Get base image path - either provided or pick randomly
+        let baseImagePath = data.baseImagePath;
+        if (!baseImagePath) {
+            const availableImages = await this.getAvailableBaseImages();
+            baseImagePath = availableImages[Math.floor(Math.random() * availableImages.length)]!;
+        }
 
         // Determine rarity
         const rarity = data.rarity || this.generateRandomRarity();
@@ -138,7 +148,7 @@ export class FlorbService {
         const florb: Omit<Florb, '_id'> = {
             florbId: this.generateFlorbId(),
             name: `${rarity} Florb`,
-            baseImagePath: data.baseImagePath,
+            baseImagePath,
             rarity,
             specialEffects,
             gradientConfig,
@@ -296,5 +306,10 @@ export class FlorbService {
         });
 
         return stats as Record<RarityLevel, number>;
+    }
+
+    // Get list of available base images
+    async getBaseImagesList(): Promise<string[]> {
+        return await this.getAvailableBaseImages();
     }
 }
