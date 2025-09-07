@@ -2,11 +2,18 @@ import { Router } from 'express';
 import { FlorbController } from '../controllers/FlorbController.js';
 
 const router = Router();
+
+console.log('Creating FlorbController...');
 const florbController = new FlorbController();
+console.log('FlorbController created successfully');
 
 // Generation routes
-router.post('/generate', florbController.generateFlorb);
-router.post('/generate/batch', florbController.batchGenerateFlorbs);
+console.log('Registering generation routes...');
+router.get('/test', (req, res) => {
+  res.json({ message: 'Florb routes are working!', timestamp: new Date().toISOString() });
+});
+router.post('/generate', (req, res) => florbController.generateFlorb(req, res));
+router.post('/generate/batch', (req, res) => florbController.batchGenerateFlorbs(req, res));
 
 // CRUD routes
 router.post('/', florbController.createFlorb);

@@ -229,7 +229,7 @@ export class FlorbController extends BaseController {
   };
 
   // Get rarity statistics
-  getRarityStats = async (req: Request, res: Response): Promise<void> => {
+  getRarityStats = async (_req: Request, res: Response): Promise<void> => {
     try {
       const stats = await this.florbService.getRarityStats();
       this.sendSuccess(res, stats, 'Rarity statistics retrieved successfully');
@@ -239,7 +239,7 @@ export class FlorbController extends BaseController {
   };
 
   // Get available rarity levels
-  getRarityLevels = async (req: Request, res: Response): Promise<void> => {
+  getRarityLevels = async (_req: Request, res: Response): Promise<void> => {
     try {
       this.sendSuccess(res, RARITY_LEVELS, 'Rarity levels retrieved successfully');
     } catch (error) {
@@ -248,7 +248,7 @@ export class FlorbController extends BaseController {
   };
 
   // Get available special effects
-  getSpecialEffects = async (req: Request, res: Response): Promise<void> => {
+  getSpecialEffects = async (_req: Request, res: Response): Promise<void> => {
     try {
       this.sendSuccess(res, SPECIAL_EFFECTS, 'Special effects retrieved successfully');
     } catch (error) {
@@ -257,7 +257,7 @@ export class FlorbController extends BaseController {
   };
 
   // Get available base images
-  getBaseImages = async (req: Request, res: Response): Promise<void> => {
+  getBaseImages = async (_req: Request, res: Response): Promise<void> => {
     try {
       const baseImages = await this.florbService.getBaseImagesList();
       this.sendSuccess(res, baseImages, 'Base images retrieved successfully');
