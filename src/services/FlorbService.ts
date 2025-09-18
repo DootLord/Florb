@@ -4,7 +4,8 @@ import {
     RARITY_LEVELS,
     SPECIAL_EFFECTS,
     RARITY_COLOR_PALETTES,
-    DEFAULT_RARITY_WEIGHTS
+    DEFAULT_RARITY_WEIGHTS,
+    RARITY_NAMES
 } from '../types/Florb.js';
 import type {
     Florb,
@@ -50,7 +51,7 @@ export class FlorbService {
             }
         }
 
-        return 'Grey'; // Fallback
+        return 'Red'; // Fallback
     }
 
     // Generate random special effects (with low probability)
@@ -78,19 +79,53 @@ export class FlorbService {
 
     // Generate gradient config based on rarity
     private generateGradientConfig(rarity: RarityLevel, customColors?: string[]): GradientConfig {
-        const colors = customColors || RARITY_COLOR_PALETTES[rarity];
+        let colors: string[];
+        
+        if (customColors) {
+            colors = customColors;
+        } else {
+            // Randomly select colors from the rarity's specific color palette
+            const rarityPalette = RARITY_COLOR_PALETTES[rarity];
+            const colorCount = Math.min(3 + Math.floor(Math.random() * 3), rarityPalette.length); // 3-5 colors max, limited by palette size
+            
+            colors = this.getRandomColorsFromPalette(rarityPalette, colorCount);
+        }
+        
         const directions: Array<'horizontal' | 'vertical' | 'diagonal' | 'radial'> = ['horizontal', 'vertical', 'diagonal', 'radial'];
         const randomDirection = directions[Math.floor(Math.random() * directions.length)]!;
 
-        // Higher rarity = higher intensity
+        // Higher rarity = higher intensity with more dramatic curve
         const rarityIndex = RARITY_LEVELS.indexOf(rarity);
-        const intensity = 0.3 + (rarityIndex / (RARITY_LEVELS.length - 1)) * 0.7;
+        // Use exponential curve for more dramatic difference between rarities
+        const intensityBase = 0.2 + (rarityIndex / (RARITY_LEVELS.length - 1)) * 0.8;
+        const intensity = Math.pow(intensityBase, 0.7); // Makes lower rarities even more subtle, higher rarities more intense
 
         return {
             colors: [...colors],
             direction: randomDirection,
             intensity: Math.round(intensity * 100) / 100
         };
+    }
+
+    // Randomly select colors from a specific rarity palette
+    private getRandomColorsFromPalette(palette: readonly string[], count: number): string[] {
+        const selectedColors: string[] = [];
+        const availableColors = [...palette]; // Create a copy to avoid modifying the original
+        
+        // Ensure we don't request more colors than available
+        const actualCount = Math.min(count, availableColors.length);
+        
+        for (let i = 0; i < actualCount; i++) {
+            const randomIndex = Math.floor(Math.random() * availableColors.length);
+            const selectedColor = availableColors[randomIndex];
+            if (selectedColor) {
+                selectedColors.push(selectedColor);
+                // Remove the selected color to avoid duplicates (optional - you can comment this out if you want potential duplicates)
+                availableColors.splice(randomIndex, 1);
+            }
+        }
+        
+        return selectedColors;
     }
 
     // Get available base images by scanning the florb_base directory
@@ -147,13 +182,13 @@ export class FlorbService {
         // Create the florb
         const florb: Omit<Florb, '_id'> = {
             florbId: this.generateFlorbId(),
-            name: `${rarity} Florb`,
+            name: `${RARITY_NAMES[rarity]} Florb`,
             baseImagePath,
             rarity,
             specialEffects,
             gradientConfig,
-            description: `A ${rarity.toLowerCase()} rarity florb with ${specialEffects.join(', ').toLowerCase()} effects.`,
-            tags: [rarity.toLowerCase(), ...specialEffects.map(e => e.toLowerCase())],
+            description: `A ${RARITY_NAMES[rarity].toLowerCase()} rarity florb with ${specialEffects.join(', ').toLowerCase()} effects.`,
+            tags: [RARITY_NAMES[rarity].toLowerCase(), ...specialEffects.map(e => e.toLowerCase())],
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -311,5 +346,33 @@ export class FlorbService {
     // Get list of available base images
     async getBaseImagesList(): Promise<string[]> {
         return await this.getAvailableBaseImages();
+    }
+
+    // Get rarity name mappings
+    async getRarityNameMappings(): Promise<Record<RarityLevel, string>> {
+        return RARITY_NAMES;
+    }
+
+    // Get all placed florbs on the world map
+    async getPlacedFlorbs(): Promise<Florb[]> {
+        const collection = await this.getCollection();
+        return await collection.find({
+            latitude: { $exists: true },
+            longitude: { $exists: true }
+        }).sort({ placedAt: -1 }).toArray();
+    }
+
+    // Get placed florbs within a bounding box
+    async getPlacedFlorbsInBounds(
+        north: number,
+        south: number,
+        east: number,
+        west: number
+    ): Promise<Florb[]> {
+        const collection = await this.getCollection();
+        return await collection.find({
+            latitude: { $gte: south, $lte: north },
+            longitude: { $gte: west, $lte: east }
+        }).sort({ placedAt: -1 }).toArray();
     }
 }

@@ -265,4 +265,14 @@ export class FlorbController extends BaseController {
       this.handleError(res, error, 'Failed to retrieve base images');
     }
   };
+
+  // Get rarity name mappings
+  getRarityNameMappings = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const mappings = await this.florbService.getRarityNameMappings();
+      this.sendSuccess(res, mappings, 'Rarity name mappings retrieved successfully');
+    } catch (error) {
+      this.handleError(res, error, 'Failed to retrieve rarity name mappings');
+    }
+  };
 }
