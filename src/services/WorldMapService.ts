@@ -2,11 +2,14 @@ import { Collection } from 'mongodb';
 import { connectToDatabase } from '../db/connection.js';
 import {
     ResourceNode,
+    ResourceNodeUpstream,
+    PlacedFlorb,
+    PlacedFlorbUpstream,
+    PlayerResources,
+    PlayerResourcesUpstream,
     RESOURCE_TYPES,
     RARITY_GATHERING_EFFECTS,
     ResourceType,
-    PlacedFlorb,
-    PlayerResources,
     GatheringAnalytics
 } from '../types/Florb.js';
 
@@ -58,7 +61,7 @@ export class WorldMapService {
         const nodes: ResourceNode[] = [];
 
         for (let i = 0; i < count; i++) {
-            const node: Omit<ResourceNode, '_id'> = {
+            const node: ResourceNodeUpstream = {
                 id: `resource_${Date.now()}_${i}`,
                 position: [
                     (Math.random() - 0.5) * 180, // latitude: -90 to 90
@@ -109,7 +112,7 @@ export class WorldMapService {
         // Get rarity config for gathering stats
         const rarityConfig = RARITY_GATHERING_EFFECTS[florbData.rarity as keyof typeof RARITY_GATHERING_EFFECTS];
 
-        const placedFlorb: Omit<PlacedFlorb, '_id'> = {
+        const placedFlorb: PlacedFlorbUpstream = {
             id: `placed_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             userId,
             florbData,
@@ -150,7 +153,7 @@ export class WorldMapService {
 
         if (!resources) {
             // Create default resources if they don't exist
-            const defaultResources: Omit<PlayerResources, '_id'> = {
+            const defaultResources: PlayerResourcesUpstream = {
                 userId,
                 Shleep: 0,
                 Mlorp: 0,

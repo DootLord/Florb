@@ -77,6 +77,12 @@ export const ResourceNodeSchema = z.object({
 
 export type ResourceNode = z.infer<typeof ResourceNodeSchema>;
 
+// Upstream type (what we send TO the server/database - without _id)
+export type ResourceNodeUpstream = Omit<ResourceNode, '_id'>;
+
+// Downstream type (what we receive FROM the server/database - with _id)
+export type ResourceNodeDownstream = ResourceNode & { _id: ObjectId };
+
 // Gradient configuration
 export const GradientConfigSchema = z.object({
   colors: z.array(z.string()).min(2, 'Gradient needs at least 2 colors'),
@@ -112,6 +118,12 @@ export const PlacedFlorbSchema = z.object({
 
 export type PlacedFlorb = z.infer<typeof PlacedFlorbSchema>;
 
+// Upstream type (what we send TO the server/database - without _id)
+export type PlacedFlorbUpstream = Omit<PlacedFlorb, '_id'>;
+
+// Downstream type (what we receive FROM the server/database - with _id)
+export type PlacedFlorbDownstream = PlacedFlorb & { _id: ObjectId };
+
 // Player resources schema
 export const PlayerResourcesSchema = z.object({
   _id: z.instanceof(ObjectId).optional(),
@@ -123,6 +135,12 @@ export const PlayerResourcesSchema = z.object({
 });
 
 export type PlayerResources = z.infer<typeof PlayerResourcesSchema>;
+
+// Upstream type (what we send TO the server/database - without _id)
+export type PlayerResourcesUpstream = Omit<PlayerResources, '_id'>;
+
+// Downstream type (what we receive FROM the server/database - with _id)
+export type PlayerResourcesDownstream = PlayerResources & { _id: ObjectId };
 
 // Gathering analytics schema
 export const GatheringAnalyticsSchema = z.object({
