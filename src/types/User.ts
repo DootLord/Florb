@@ -1,26 +1,44 @@
 import { z } from 'zod';
 import { ObjectId } from 'mongodb';
 
-// Zod schema for creating a user
-export const CreateUserSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
-  email: z.string().email('Invalid email format'),
-});
-
-// Zod schema for updating a user
-export const UpdateUserSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long').optional(),
-  email: z.string().email('Invalid email format').optional(),
-});
-
-// Full user schema (includes database fields)
-export const UserSchema = CreateUserSchema.extend({
+// User schema for authentication
+export const UserSchema = z.object({
   _id: z.instanceof(ObjectId).optional(),
+  username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username too long'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
 });
 
-// Infer TypeScript types from Zod schemas
 export type User = z.infer<typeof UserSchema>;
-export type CreateUserDto = z.infer<typeof CreateUserSchema>;
-export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
+
+// Input type (what we send TO the server/database - without _id)
+export type UserInput = Omit<User, '_id'>;
+
+// Response type (what we receive FROM the server/database - with _id)
+export type UserResponse = User & { _id: ObjectId };
+
+// Auth request schemas
+export const RegisterSchema = z.object({
+  username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username too long'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+export const LoginSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export type RegisterDto = z.infer<typeof RegisterSchema>;
+export type LoginDto = z.infer<typeof LoginSchema>;
+
+// Auth response types
+export interface AuthResponse {
+  token: string;
+  message: string;
+}
+
+export interface VerifyResponse {
+  valid: boolean;
+  username?: string;
+  message?: string;
+}

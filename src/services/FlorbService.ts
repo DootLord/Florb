@@ -33,6 +33,18 @@ export class FlorbService {
         return this.collection;
     }
 
+    // Normalize florb data to ensure required fields are present
+    private normalizeFlorb(florb: Florb): Florb {
+        return {
+            ...florb,
+            rarity: florb.rarity || 'Common',
+            specialEffects: florb.specialEffects || [],
+            gradientConfig: florb.gradientConfig || this.generateGradientConfig(florb.rarity || 'Common'),
+            description: florb.description || '',
+            tags: florb.tags || []
+        };
+    }
+
     // Generate a unique florb ID
     private generateFlorbId(): string {
         return `florb_${randomBytes(8).toString('hex')}`;
@@ -51,7 +63,7 @@ export class FlorbService {
             }
         }
 
-        return 'Red'; // Fallback
+        return 'Legendary'; // Fallback
     }
 
     // Generate random special effects (with low probability)
@@ -60,21 +72,19 @@ export class FlorbService {
         const effectProbability = 0.15; // 15% chance for any special effect
 
         for (const effect of SPECIAL_EFFECTS) {
-            if (effect === 'None') continue;
-
             // Higher rarity effects have lower probability
             let probability = effectProbability;
-            if (effect === 'Holographic') probability = 0.1;
-            if (effect === 'Rainbow' || effect === 'Prismatic') probability = 0.05;
-            if (effect === 'Animated') probability = 0.03;
-            if (effect === 'Glitch') probability = 0.02;
+            if (effect === 'Holo') probability = 0.1;
+            if (effect === 'Foil') probability = 0.08;
+            if (effect === 'Shimmer') probability = 0.05;
+            if (effect === 'Glow') probability = 0.03;
 
             if (Math.random() < probability) {
                 effects.push(effect);
             }
         }
 
-        return effects.length > 0 ? effects : ['None'];
+        return effects.length > 0 ? effects : [];
     }
 
     // Generate gradient config based on rarity
@@ -158,7 +168,7 @@ export class FlorbService {
     }
 
     // Generate a single florb
-    async generateFlorb(data: GenerateFlorbDto): Promise<Florb> {
+    async generateFlorb(data: GenerateFlorbDto, userId: string): Promise<Florb> {
         const collection = await this.getCollection();
 
         // Get base image path - either provided or pick randomly
@@ -181,6 +191,7 @@ export class FlorbService {
 
         // Create the florb
         const florb: Omit<Florb, '_id'> = {
+            userId,
             florbId: this.generateFlorbId(),
             name: `${RARITY_NAMES[rarity]} Florb`,
             baseImagePath,
@@ -194,11 +205,11 @@ export class FlorbService {
         };
 
         const result = await collection.insertOne(florb);
-        return { ...florb, _id: result.insertedId };
+        return this.normalizeFlorb({ ...florb, _id: result.insertedId });
     }
 
     // Generate multiple florbs
-    async batchGenerateFlorbs(data: BatchGenerateFlorbDto): Promise<Florb[]> {
+    async batchGenerateFlorbs(data: BatchGenerateFlorbDto, userId: string): Promise<Florb[]> {
         const availableImages = data.baseImagePaths || await this.getAvailableBaseImages();
         const rarityWeights = data.rarityWeights || DEFAULT_RARITY_WEIGHTS;
         const florbs: Florb[] = [];
@@ -212,7 +223,7 @@ export class FlorbService {
                 rarity
             };
 
-            const florb = await this.generateFlorb(generateData);
+            const florb = await this.generateFlorb(generateData, userId);
             florbs.push(florb);
         }
 
@@ -220,10 +231,11 @@ export class FlorbService {
     }
 
     // Create a custom florb
-    async createFlorb(data: CreateFlorbDto): Promise<Florb> {
+    async createFlorb(data: CreateFlorbDto, userId: string): Promise<Florb> {
         const collection = await this.getCollection();
 
         const florb: Omit<Florb, '_id'> = {
+            userId,
             ...data,
             florbId: this.generateFlorbId(),
             gradientConfig: data.gradientConfig || this.generateGradientConfig(
@@ -235,7 +247,7 @@ export class FlorbService {
         };
 
         const result = await collection.insertOne(florb);
-        return { ...florb, _id: result.insertedId };
+        return this.normalizeFlorb({ ...florb, _id: result.insertedId });
     }
 
     // Get all florbs with pagination
@@ -251,7 +263,7 @@ export class FlorbService {
         ]);
 
         return {
-            florbs,
+            florbs: florbs.map(this.normalizeFlorb.bind(this)),
             total,
             page,
             totalPages: Math.ceil(total / limit)
@@ -261,13 +273,15 @@ export class FlorbService {
     // Get florb by ID
     async getFlorbById(id: string): Promise<Florb | null> {
         const collection = await this.getCollection();
-        return await collection.findOne({ _id: new ObjectId(id) });
+        const florb = await collection.findOne({ _id: new ObjectId(id) });
+        return florb ? this.normalizeFlorb(florb) : null;
     }
 
     // Get florb by florb ID
     async getFlorbByFlorbId(florbId: string): Promise<Florb | null> {
         const collection = await this.getCollection();
-        return await collection.findOne({ florbId });
+        const florb = await collection.findOne({ florbId });
+        return florb ? this.normalizeFlorb(florb) : null;
     }
 
     // Update florb
@@ -293,7 +307,7 @@ export class FlorbService {
             { returnDocument: 'after' }
         );
 
-        return result || null;
+        return result ? this.normalizeFlorb(result) : null;
     }
 
     // Delete florb
@@ -306,13 +320,15 @@ export class FlorbService {
     // Get florbs by rarity
     async getFlorbsByRarity(rarity: RarityLevel): Promise<Florb[]> {
         const collection = await this.getCollection();
-        return await collection.find({ rarity }).sort({ createdAt: -1 }).toArray();
+        const florbs = await collection.find({ rarity }).sort({ createdAt: -1 }).toArray();
+        return florbs.map(this.normalizeFlorb.bind(this));
     }
 
     // Get florbs with special effects
     async getFlorbsWithEffect(effect: SpecialEffect): Promise<Florb[]> {
         const collection = await this.getCollection();
-        return await collection.find({ specialEffects: effect }).sort({ createdAt: -1 }).toArray();
+        const florbs = await collection.find({ specialEffects: effect }).sort({ createdAt: -1 }).toArray();
+        return florbs.map(this.normalizeFlorb.bind(this));
     }
 
     // Get rarity distribution statistics
@@ -356,23 +372,45 @@ export class FlorbService {
     // Get all placed florbs on the world map
     async getPlacedFlorbs(): Promise<Florb[]> {
         const collection = await this.getCollection();
-        return await collection.find({
+        const florbs = await collection.find({
             latitude: { $exists: true },
             longitude: { $exists: true }
         }).sort({ placedAt: -1 }).toArray();
+        return florbs.map(this.normalizeFlorb.bind(this));
     }
 
-    // Get placed florbs within a bounding box
-    async getPlacedFlorbsInBounds(
-        north: number,
-        south: number,
-        east: number,
-        west: number
-    ): Promise<Florb[]> {
+    // Get florbs by user ID with pagination
+    async getUserFlorbs(userId: string, page = 1, limit = 20): Promise<{ florbs: Florb[], total: number, page: number, totalPages: number }> {
         const collection = await this.getCollection();
-        return await collection.find({
-            latitude: { $gte: south, $lte: north },
-            longitude: { $gte: west, $lte: east }
-        }).sort({ placedAt: -1 }).toArray();
+        const skip = (page - 1) * limit;
+
+        const filter = { userId };
+
+        const [florbs, total] = await Promise.all([
+            collection.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
+            collection.countDocuments(filter)
+        ]);
+
+        return {
+            florbs: florbs.map(this.normalizeFlorb.bind(this)),
+            total,
+            page,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
+    // Get user florb count
+    async getUserFlorbCount(userId: string): Promise<number> {
+        const collection = await this.getCollection();
+        return await collection.countDocuments({ userId });
+    }
+
+    // Get user rare florb count (Rare, Epic, Legendary)
+    async getUserRareFlorbCount(userId: string): Promise<number> {
+        const collection = await this.getCollection();
+        return await collection.countDocuments({ 
+            userId, 
+            rarity: { $in: ['Rare', 'Epic', 'Legendary'] } 
+        });
     }
 }

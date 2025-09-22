@@ -11,10 +11,14 @@ export class WorldMapController {
     // GET /api/world-map/florbs - Get all placed Florbs for the current user
     async getPlacedFlorbs(req: Request, res: Response): Promise<void> {
         try {
-            // TODO: Get userId from authentication middleware
-            const userId = (req as any).user?.id || 'test_user';
+            if (!req.user) {
+                res.status(401).json({ message: 'Authentication required' });
+                return;
+            }
+
+            const userId = req.user.userId;
             const florbs = await this.worldMapService.getPlacedFlorbs(userId);
-            res.json(florbs);
+            res.json({ florbs });
         } catch (error) {
             console.error('Error getting placed florbs:', error);
             res.status(500).json({ error: 'Failed to fetch Florbs' });
@@ -24,8 +28,12 @@ export class WorldMapController {
     // POST /api/world-map/florbs - Place a new Florb on the map
     async placeFlorb(req: Request, res: Response): Promise<void> {
         try {
-            // TODO: Get userId from authentication middleware
-            const userId = (req as any).user?.id || 'test_user';
+            if (!req.user) {
+                res.status(401).json({ message: 'Authentication required' });
+                return;
+            }
+
+            const userId = req.user.userId;
             const { florbData, position } = req.body;
 
             if (!florbData || !position) {
@@ -44,8 +52,12 @@ export class WorldMapController {
     // PUT /api/world-map/florbs - Update all placed Florbs (bulk)
     async updatePlacedFlorbs(req: Request, res: Response): Promise<void> {
         try {
-            // TODO: Get userId from authentication middleware
-            const userId = (req as any).user?.id || 'test_user';
+            if (!req.user) {
+                res.status(401).json({ message: 'Authentication required' });
+                return;
+            }
+
+            const userId = req.user.userId;
             const updates = req.body;
 
             if (!Array.isArray(updates)) {
@@ -93,13 +105,19 @@ export class WorldMapController {
     // GET /api/world-map/player-resources - Get current player resources
     async getPlayerResources(req: Request, res: Response): Promise<void> {
         try {
-            // TODO: Get userId from authentication middleware
-            const userId = (req as any).user?.id || 'test_user';
+            if (!req.user) {
+                res.status(401).json({ message: 'Authentication required' });
+                return;
+            }
+
+            const userId = req.user.userId;
             const resources = await this.worldMapService.getPlayerResources(userId);
             res.json({
-                Shleep: resources.Shleep,
-                Mlorp: resources.Mlorp,
-                Spoonch: resources.Spoonch
+                resources: {
+                    crystal: resources.crystal,
+                    energy: resources.energy,
+                    metal: resources.metal
+                }
             });
         } catch (error) {
             console.error('Error getting player resources:', error);
@@ -110,21 +128,27 @@ export class WorldMapController {
     // PUT /api/world-map/player-resources - Update player resources
     async updatePlayerResources(req: Request, res: Response): Promise<void> {
         try {
-            // TODO: Get userId from authentication middleware
-            const userId = (req as any).user?.id || 'test_user';
-            const { Shleep, Mlorp, Spoonch } = req.body;
+            if (!req.user) {
+                res.status(401).json({ message: 'Authentication required' });
+                return;
+            }
 
-            if (typeof Shleep !== 'number' || typeof Mlorp !== 'number' || typeof Spoonch !== 'number') {
+            const userId = req.user.userId;
+            const { crystal, energy, metal } = req.body;
+
+            if (typeof crystal !== 'number' || typeof energy !== 'number' || typeof metal !== 'number') {
                 res.status(400).json({ error: 'Invalid resource values' });
                 return;
             }
 
-            const updatedResources = await this.worldMapService.updatePlayerResources(userId, { Shleep, Mlorp, Spoonch });
+            const updatedResources = await this.worldMapService.updatePlayerResources(userId, { crystal, energy, metal });
             res.json({
                 success: true,
-                Shleep: updatedResources.Shleep,
-                Mlorp: updatedResources.Mlorp,
-                Spoonch: updatedResources.Spoonch
+                totalResources: {
+                    crystal: updatedResources.crystal,
+                    energy: updatedResources.energy,
+                    metal: updatedResources.metal
+                }
             });
         } catch (error) {
             console.error('Error updating player resources:', error);
@@ -135,17 +159,37 @@ export class WorldMapController {
     // POST /api/world-map/gather - Record gathering activity
     async recordGathering(req: Request, res: Response): Promise<void> {
         try {
-            // TODO: Get userId from authentication middleware
-            const userId = (req as any).user?.id || 'test_user';
-            const { gathered, timestamp } = req.body;
-
-            if (!gathered || !timestamp) {
-                res.status(400).json({ error: 'Missing gathered data or timestamp' });
+            if (!req.user) {
+                res.status(401).json({ message: 'Authentication required' });
                 return;
             }
 
+            const userId = req.user.userId;
+            const { resourceId, amount } = req.body;
+
+            if (!resourceId || typeof amount !== 'number') {
+                res.status(400).json({ error: 'Missing resourceId or invalid amount' });
+                return;
+            }
+
+            // For now, just record the gathering - we'll need to update the service to handle this properly
+            const gathered = { crystal: amount, energy: 0, metal: 0 }; // TODO: Determine resource type from resourceId
+            const timestamp = new Date().toISOString();
+
             await this.worldMapService.recordGatheringAnalytics(userId, gathered, timestamp);
-            res.json({ success: true, recorded: true });
+
+            // Get updated resources
+            const updatedResources = await this.worldMapService.getPlayerResources(userId);
+
+            res.json({
+                success: true,
+                gathered: { crystal: amount },
+                totalResources: {
+                    crystal: updatedResources.crystal,
+                    energy: updatedResources.energy,
+                    metal: updatedResources.metal
+                }
+            });
         } catch (error) {
             console.error('Error recording gathering:', error);
             res.status(500).json({ error: 'Failed to record gathering' });
@@ -170,7 +214,7 @@ export class WorldMapController {
     }
 
     // GET /api/world-map/export-resources - Export resource data
-    async exportResourceData(req: Request, res: Response): Promise<void> {
+    async exportResourceData(_req: Request, res: Response): Promise<void> {
         try {
             const data = await this.worldMapService.exportResourceData();
             res.json({

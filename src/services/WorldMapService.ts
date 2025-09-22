@@ -2,11 +2,11 @@ import { Collection } from 'mongodb';
 import { connectToDatabase } from '../db/connection.js';
 import {
     ResourceNode,
-    ResourceNodeUpstream,
+    ResourceNodeInput,
     PlacedFlorb,
-    PlacedFlorbUpstream,
+    PlacedFlorbInput,
     PlayerResources,
-    PlayerResourcesUpstream,
+    PlayerResourcesInput,
     RESOURCE_TYPES,
     RARITY_GATHERING_EFFECTS,
     ResourceType,
@@ -61,7 +61,7 @@ export class WorldMapService {
         const nodes: ResourceNode[] = [];
 
         for (let i = 0; i < count; i++) {
-            const node: ResourceNodeUpstream = {
+            const node: ResourceNodeInput = {
                 id: `resource_${Date.now()}_${i}`,
                 position: [
                     (Math.random() - 0.5) * 180, // latitude: -90 to 90
@@ -105,6 +105,12 @@ export class WorldMapService {
         return await collection.find({ userId }).toArray();
     }
 
+    // Get count of placed Florbs for a user
+    async getPlacedFlorbCount(userId: string): Promise<number> {
+        const collection = await this.getPlacedFlorbCollection();
+        return await collection.countDocuments({ userId });
+    }
+
     // Place a new Florb on the map
     async placeFlorb(userId: string, florbData: any, position: [number, number]): Promise<PlacedFlorb> {
         const collection = await this.getPlacedFlorbCollection();
@@ -112,7 +118,7 @@ export class WorldMapService {
         // Get rarity config for gathering stats
         const rarityConfig = RARITY_GATHERING_EFFECTS[florbData.rarity as keyof typeof RARITY_GATHERING_EFFECTS];
 
-        const placedFlorb: PlacedFlorbUpstream = {
+        const placedFlorb: PlacedFlorbInput = {
             id: `placed_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             userId,
             florbData,
@@ -153,11 +159,11 @@ export class WorldMapService {
 
         if (!resources) {
             // Create default resources if they don't exist
-            const defaultResources: PlayerResourcesUpstream = {
+            const defaultResources: PlayerResourcesInput = {
                 userId,
-                Shleep: 0,
-                Mlorp: 0,
-                Spoonch: 0,
+                crystal: 0,
+                energy: 0,
+                metal: 0,
                 updatedAt: new Date()
             };
             const result = await collection.insertOne(defaultResources);
@@ -168,7 +174,7 @@ export class WorldMapService {
     }
 
     // Update player resources
-    async updatePlayerResources(userId: string, resources: { Shleep: number; Mlorp: number; Spoonch: number }): Promise<PlayerResources> {
+    async updatePlayerResources(userId: string, resources: { crystal: number; energy: number; metal: number }): Promise<PlayerResources> {
         const collection = await this.getPlayerResourcesCollection();
 
         const updateData = {
@@ -186,7 +192,7 @@ export class WorldMapService {
     }
 
     // Record gathering analytics
-    async recordGatheringAnalytics(userId: string, gathered: { Shleep: number; Mlorp: number; Spoonch: number }, timestamp: string): Promise<void> {
+    async recordGatheringAnalytics(userId: string, gathered: { crystal: number; energy: number; metal: number }, timestamp: string): Promise<void> {
         const collection = await this.getAnalyticsCollection();
 
         await collection.insertOne({

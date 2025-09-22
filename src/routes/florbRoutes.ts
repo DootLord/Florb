@@ -1,16 +1,18 @@
 import { Router } from 'express';
 import { FlorbController } from '../controllers/FlorbController.js';
+import { AuthMiddleware } from '../middleware/AuthMiddleware.js';
 
 const router = Router();
 const florbController = new FlorbController();
+const authMiddleware = new AuthMiddleware();
 
-// Generation routes
-router.post('/generate', florbController.generateFlorb);
-router.post('/generate/batch', florbController.batchGenerateFlorbs);
+// Generation routes (require authentication)
+router.post('/generate', authMiddleware.authenticate, florbController.generateFlorb);
+router.post('/generate/batch', authMiddleware.authenticate, florbController.batchGenerateFlorbs);
 
 // CRUD routes
 router.post('/', florbController.createFlorb);
-router.get('/', florbController.getAllFlorbs);
+router.get('/', authMiddleware.authenticate, florbController.getUserFlorbs); // Changed to get user's florbs
 router.get('/:id', florbController.getFlorbById);
 router.put('/:id', florbController.updateFlorb);
 router.delete('/:id', florbController.deleteFlorb);

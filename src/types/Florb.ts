@@ -3,67 +3,52 @@ import { ObjectId } from 'mongodb';
 
 // Enum-like constants for rarity levels (ordered from common to mythic)
 export const RARITY_LEVELS = [
-  'Grey',    // Common - dull and basic
-  'White',   // Common - subtle and plain  
-  'Green',   // Uncommon - natural appearance
-  'Blue',    // Rare - appealing and noticeable
-  'Purple',  // Epic - magical and special
-  'Orange',  // Legendary - fiery and impressive
-  'Red'      // Mythic - maximum visual impact
+  'Common',    // Basic florbs
+  'Rare',      // Uncommon florbs
+  'Epic',      // Rare florbs
+  'Legendary'  // Ultra-rare florbs
 ] as const;
 
 // Mapping from color rarity to actual rarity name
 export const RARITY_NAMES = {
-  Grey: 'Common',
-  White: 'Common',
-  Green: 'Uncommon',
-  Blue: 'Rare',
-  Purple: 'Epic',
-  Orange: 'Legendary',
-  Red: 'Mythic'
+  Common: 'Common',
+  Rare: 'Rare',
+  Epic: 'Epic',
+  Legendary: 'Legendary'
 } as const;
 
 // Enum-like constants for special effects
 export const SPECIAL_EFFECTS = [
-  'None',
-  'Holographic',
+  'Holo',
   'Foil',
-  'Rainbow',
-  'Glitch',
-  'Animated',
-  'Prismatic'
+  'Shimmer',
+  'Glow'
 ] as const;
 
 // Color palette for each rarity - designed for gradient overlays
 // Each rarity uses the full color spectrum but with different saturation levels
 export const RARITY_COLOR_PALETTES = {
-  Grey: ['#505050', '#606060', '#555555', '#4A4A4A'], // Very dull, desaturated (any hue but no saturation)
-  White: ['#B0B0B0', '#C0C0C0', '#D0D0D0', '#E0E0E0'], // Low saturation, lighter tones
-  Green: ['#4A7C59', '#5B8C6B', '#6B9C7B', '#7BAC8B'], // Moderate saturation, natural tones
-  Blue: ['#3366CC', '#4477DD', '#5588EE', '#6699FF'], // Good saturation, appealing colors
-  Purple: ['#7744AA', '#8855BB', '#9966CC', '#AA77DD'], // High saturation, rich colors
-  Orange: ['#CC3366', '#DD4477', '#EE5588', '#FF6699', '#AA77CC', '#BB88DD'], // Very high saturation, full spectrum
-  Red: ['#FF0033', '#00FF33', '#3300FF', '#FFFF00', '#FF3300', '#33FF00', '#0033FF', '#FF00FF'] // Maximum saturation, full rainbow spectrum
+  Common: ['#B0B0B0', '#C0C0C0', '#D0D0D0', '#E0E0E0'], // Low saturation, lighter tones
+  Rare: ['#4A7C59', '#5B8C6B', '#6B9C7B', '#7BAC8B'], // Moderate saturation, natural tones
+  Epic: ['#7744AA', '#8855BB', '#9966CC', '#AA77DD'], // High saturation, rich colors
+  Legendary: ['#FF0033', '#00FF33', '#3300FF', '#FFFF00', '#FF3300', '#33FF00', '#0033FF', '#FF00FF'] // Maximum saturation, full rainbow spectrum
 } as const;
 
 // Resource types that can be gathered
 export const RESOURCE_TYPES = [
-  'Shleep',
-  'Mlorp',
-  'Spoonch'
+  'crystal',
+  'energy',
+  'metal'
 ] as const;
 
 export type ResourceType = typeof RESOURCE_TYPES[number];
 
 // Rarity effects on gathering
 export const RARITY_GATHERING_EFFECTS = {
-  Grey: { radius: 50, durationHours: 1, throughputMultiplier: 0.5 },
-  White: { radius: 75, durationHours: 2, throughputMultiplier: 0.75 },
-  Green: { radius: 100, durationHours: 4, throughputMultiplier: 1.0 },
-  Blue: { radius: 150, durationHours: 8, throughputMultiplier: 1.5 },
-  Purple: { radius: 200, durationHours: 12, throughputMultiplier: 2.0 },
-  Orange: { radius: 300, durationHours: 24, throughputMultiplier: 3.0 },
-  Red: { radius: 500, durationHours: 48, throughputMultiplier: 5.0 }
+  Common: { radius: 50, durationHours: 1, throughputMultiplier: 0.5 },
+  Rare: { radius: 100, durationHours: 4, throughputMultiplier: 1.0 },
+  Epic: { radius: 200, durationHours: 12, throughputMultiplier: 2.0 },
+  Legendary: { radius: 500, durationHours: 48, throughputMultiplier: 5.0 }
 } as const;
 
 // Resource node schema
@@ -77,11 +62,11 @@ export const ResourceNodeSchema = z.object({
 
 export type ResourceNode = z.infer<typeof ResourceNodeSchema>;
 
-// Upstream type (what we send TO the server/database - without _id)
-export type ResourceNodeUpstream = Omit<ResourceNode, '_id'>;
+// Input type (what we send TO the server/database - without _id)
+export type ResourceNodeInput = Omit<ResourceNode, '_id'>;
 
-// Downstream type (what we receive FROM the server/database - with _id)
-export type ResourceNodeDownstream = ResourceNode & { _id: ObjectId };
+// Response type (what we receive FROM the server/database - with _id)
+export type ResourceNodeResponse = ResourceNode & { _id: ObjectId };
 
 // Gradient configuration
 export const GradientConfigSchema = z.object({
@@ -110,46 +95,46 @@ export const PlacedFlorbSchema = z.object({
   effectiveness: z.number().min(0), // multiplier
   lastGathered: z.string().optional(), // ISO date string
   totalGathered: z.object({
-    Shleep: z.number().min(0),
-    Mlorp: z.number().min(0),
-    Spoonch: z.number().min(0),
+    crystal: z.number().min(0),
+    energy: z.number().min(0),
+    metal: z.number().min(0),
   }).optional(),
 });
 
 export type PlacedFlorb = z.infer<typeof PlacedFlorbSchema>;
 
-// Upstream type (what we send TO the server/database - without _id)
-export type PlacedFlorbUpstream = Omit<PlacedFlorb, '_id'>;
+// Input type (what we send TO the server/database - without _id)
+export type PlacedFlorbInput = Omit<PlacedFlorb, '_id'>;
 
-// Downstream type (what we receive FROM the server/database - with _id)
-export type PlacedFlorbDownstream = PlacedFlorb & { _id: ObjectId };
+// Response type (what we receive FROM the server/database - with _id)
+export type PlacedFlorbResponse = PlacedFlorb & { _id: ObjectId };
 
 // Player resources schema
 export const PlayerResourcesSchema = z.object({
   _id: z.instanceof(ObjectId).optional(),
   userId: z.string(),
-  Shleep: z.number().min(0),
-  Mlorp: z.number().min(0),
-  Spoonch: z.number().min(0),
+  crystal: z.number().min(0),
+  energy: z.number().min(0),
+  metal: z.number().min(0),
   updatedAt: z.date().optional(),
 });
 
 export type PlayerResources = z.infer<typeof PlayerResourcesSchema>;
 
-// Upstream type (what we send TO the server/database - without _id)
-export type PlayerResourcesUpstream = Omit<PlayerResources, '_id'>;
+// Input type (what we send TO the server/database - without _id)
+export type PlayerResourcesInput = Omit<PlayerResources, '_id'>;
 
-// Downstream type (what we receive FROM the server/database - with _id)
-export type PlayerResourcesDownstream = PlayerResources & { _id: ObjectId };
+// Response type (what we receive FROM the server/database - with _id)
+export type PlayerResourcesResponse = PlayerResources & { _id: ObjectId };
 
 // Gathering analytics schema
 export const GatheringAnalyticsSchema = z.object({
   _id: z.instanceof(ObjectId).optional(),
   userId: z.string(),
   gathered: z.object({
-    Shleep: z.number().min(0),
-    Mlorp: z.number().min(0),
-    Spoonch: z.number().min(0),
+    crystal: z.number().min(0),
+    energy: z.number().min(0),
+    metal: z.number().min(0),
   }),
   timestamp: z.string(), // ISO date string
 });
@@ -186,6 +171,7 @@ export const UpdateFlorbSchema = z.object({
 // Full florb schema (includes database fields)
 export const FlorbSchema = CreateFlorbSchema.extend({
   _id: z.instanceof(ObjectId).optional(),
+  userId: z.string(), // User who owns this florb
   florbId: z.string().optional(), // Unique identifier for the florb
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -245,11 +231,8 @@ export type RarityWeights = {
 // Default rarity weights (higher numbers = more common)
 // Designed like a trading card game distribution
 export const DEFAULT_RARITY_WEIGHTS: RarityWeights = {
-  Grey: 45,    // Very common - plain, everyday florbs
-  White: 30,   // Common - slightly better than grey
-  Green: 15,   // Uncommon - noticeable but not rare
-  Blue: 7,     // Rare - actually rare and desirable
-  Purple: 2.5, // Epic - quite rare and special
-  Orange: 0.8, // Legendary - very rare, highly sought after
-  Red: 0.2     // Mythic - extremely rare, collector's dream
+  Common: 70,     // Very common - basic florbs
+  Rare: 20,       // Uncommon - harder to find
+  Epic: 8,        // Rare - quite valuable
+  Legendary: 2    // Ultra-rare - collector's items
 };

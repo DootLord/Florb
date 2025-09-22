@@ -39,12 +39,17 @@ export class FlorbController extends BaseController {
   // Generate a single florb
   generateFlorb = async (req: Request, res: Response): Promise<void> => {
     try {
+      if (!req.user) {
+        this.sendError(res, 'Authentication required', 401);
+        return;
+      }
+
       // Handle empty request body by providing empty object
       const requestData = req.body || {};
       const validatedData = GenerateFlorbSchema.parse(requestData);
-      const florb = await this.florbService.generateFlorb(validatedData);
-      
-      this.sendSuccess(res, florb, 'Florb generated successfully', 201);
+      const florb = await this.florbService.generateFlorb(validatedData, req.user.userId);
+
+      res.status(201).json({ data: florb });
     } catch (error) {
       this.handleError(res, error, 'Failed to generate florb');
     }
@@ -69,32 +74,35 @@ export class FlorbController extends BaseController {
   // Create a custom florb
   createFlorb = async (req: Request, res: Response): Promise<void> => {
     try {
+      if (!req.user) {
+        this.sendError(res, 'Authentication required', 401);
+        return;
+      }
+
       const validatedData = CreateFlorbSchema.parse(req.body);
-      const florb = await this.florbService.createFlorb(validatedData);
+      const florb = await this.florbService.createFlorb(validatedData, req.user.userId);
       
-      this.sendSuccess(res, florb, 'Florb created successfully', 201);
+      res.status(201).json(florb);
     } catch (error) {
       this.handleError(res, error, 'Failed to create florb');
     }
   };
 
-  // Get all florbs with pagination and filtering
-  getAllFlorbs = async (req: Request, res: Response): Promise<void> => {
+  // Get authenticated user's florbs
+  getUserFlorbs = async (req: Request, res: Response): Promise<void> => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-      const rarity = req.query.rarity as RarityLevel | undefined;
-      
-      // Validate rarity if provided
-      if (rarity && !RARITY_LEVELS.includes(rarity)) {
-        this.sendError(res, 'Invalid rarity level', 400);
+      if (!req.user) {
+        this.sendError(res, 'Authentication required', 401);
         return;
       }
-      
-      const result = await this.florbService.getAllFlorbs(page, limit, rarity);
-      this.sendSuccess(res, result, 'Florbs retrieved successfully');
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+
+      const result = await this.florbService.getUserFlorbs(req.user.userId, page, limit);
+      res.json({ florbs: result.florbs });
     } catch (error) {
-      this.handleError(res, error, 'Failed to retrieve florbs');
+      this.handleError(res, error, 'Failed to retrieve user florbs');
     }
   };
 
@@ -115,7 +123,7 @@ export class FlorbController extends BaseController {
         return;
       }
       
-      this.sendSuccess(res, florb, 'Florb retrieved successfully');
+      res.json(florb);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve florb');
     }
@@ -138,7 +146,7 @@ export class FlorbController extends BaseController {
         return;
       }
       
-      this.sendSuccess(res, florb, 'Florb retrieved successfully');
+      res.json(florb);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve florb');
     }
@@ -163,7 +171,7 @@ export class FlorbController extends BaseController {
         return;
       }
       
-      this.sendSuccess(res, florb, 'Florb updated successfully');
+      res.json(florb);
     } catch (error) {
       this.handleError(res, error, 'Failed to update florb');
     }
@@ -186,7 +194,7 @@ export class FlorbController extends BaseController {
         return;
       }
       
-      this.sendSuccess(res, { id }, 'Florb deleted successfully');
+      res.json({ id });
     } catch (error) {
       this.handleError(res, error, 'Failed to delete florb');
     }
@@ -204,7 +212,7 @@ export class FlorbController extends BaseController {
       }
       
       const florbs = await this.florbService.getFlorbsByRarity(rarity as RarityLevel);
-      this.sendSuccess(res, florbs, `${rarity} florbs retrieved successfully`);
+      res.json(florbs);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve florbs by rarity');
     }
@@ -222,7 +230,7 @@ export class FlorbController extends BaseController {
       }
       
       const florbs = await this.florbService.getFlorbsWithEffect(effect as SpecialEffect);
-      this.sendSuccess(res, florbs, `Florbs with ${effect} effect retrieved successfully`);
+      res.json(florbs);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve florbs by effect');
     }
@@ -232,7 +240,7 @@ export class FlorbController extends BaseController {
   getRarityStats = async (_req: Request, res: Response): Promise<void> => {
     try {
       const stats = await this.florbService.getRarityStats();
-      this.sendSuccess(res, stats, 'Rarity statistics retrieved successfully');
+      res.json(stats);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve rarity statistics');
     }
@@ -241,7 +249,7 @@ export class FlorbController extends BaseController {
   // Get available rarity levels
   getRarityLevels = async (_req: Request, res: Response): Promise<void> => {
     try {
-      this.sendSuccess(res, RARITY_LEVELS, 'Rarity levels retrieved successfully');
+      res.json(RARITY_LEVELS);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve rarity levels');
     }
@@ -250,7 +258,7 @@ export class FlorbController extends BaseController {
   // Get available special effects
   getSpecialEffects = async (_req: Request, res: Response): Promise<void> => {
     try {
-      this.sendSuccess(res, SPECIAL_EFFECTS, 'Special effects retrieved successfully');
+      res.json(SPECIAL_EFFECTS);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve special effects');
     }
@@ -260,7 +268,7 @@ export class FlorbController extends BaseController {
   getBaseImages = async (_req: Request, res: Response): Promise<void> => {
     try {
       const baseImages = await this.florbService.getBaseImagesList();
-      this.sendSuccess(res, baseImages, 'Base images retrieved successfully');
+      res.json(baseImages);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve base images');
     }
@@ -270,7 +278,7 @@ export class FlorbController extends BaseController {
   getRarityNameMappings = async (_req: Request, res: Response): Promise<void> => {
     try {
       const mappings = await this.florbService.getRarityNameMappings();
-      this.sendSuccess(res, mappings, 'Rarity name mappings retrieved successfully');
+      res.json(mappings);
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve rarity name mappings');
     }
