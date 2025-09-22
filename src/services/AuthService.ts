@@ -6,10 +6,10 @@ import { User, UserInput, RegisterDto, LoginDto, AuthResponse, VerifyResponse } 
 
 export class AuthService {
     private userCollection: Collection<User> | null = null;
-    private jwtSecret: string;
+    private jwtSecret: string = 'your-secret-key-change-in-production'; // Fixed secret for consistency
 
     constructor() {
-        this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+        // this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
     }
 
     private async getUserCollection(): Promise<Collection<User>> {

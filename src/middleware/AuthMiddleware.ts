@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { AuthService } from '../services/AuthService.js';
 
 // Extend Express Request interface to include user
@@ -15,6 +16,7 @@ declare global {
 
 export class AuthMiddleware {
     private authService: AuthService;
+    private jwtSecret: string = 'your-secret-key-change-in-production'; // Use same as AuthService
 
     constructor() {
         this.authService = new AuthService();
@@ -32,6 +34,10 @@ export class AuthMiddleware {
 
             const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
+            // Decode the token to get user info
+            const decoded = jwt.verify(token, this.jwtSecret) as { userId: string; username: string };
+
+            // Verify the user still exists
             const verification = await this.authService.verifyToken(token);
 
             if (!verification.valid) {
@@ -43,8 +49,8 @@ export class AuthMiddleware {
 
             // Attach user info to request
             req.user = {
-                userId: token, // We'll decode this properly in the service
-                username: verification.username!
+                userId: decoded.userId,
+                username: decoded.username
             };
 
             next();
@@ -60,13 +66,19 @@ export class AuthMiddleware {
 
             if (authHeader && authHeader.startsWith('Bearer ')) {
                 const token = authHeader.substring(7);
-                const verification = await this.authService.verifyToken(token);
+                
+                try {
+                    const decoded = jwt.verify(token, this.jwtSecret) as { userId: string; username: string };
+                    const verification = await this.authService.verifyToken(token);
 
-                if (verification.valid) {
-                    req.user = {
-                        userId: token,
-                        username: verification.username!
-                    };
+                    if (verification.valid) {
+                        req.user = {
+                            userId: decoded.userId,
+                            username: decoded.username
+                        };
+                    }
+                } catch (error) {
+                    // Invalid token, continue without authentication
                 }
             }
 
