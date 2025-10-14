@@ -1,7 +1,15 @@
 import { MongoClient, Db } from 'mongodb';
+import dotenv from 'dotenv';
 
-const uri = 'mongodb://localhost:27013/';
-const dbName = 'florb';
+dotenv.config();
+
+//? Might be a better place for this to live somewhere else?
+if(!process.env.MONGO_URL || !process.env.DB_NAME) {
+    throw new Error('MONGO_URL and DB_NAME must be defined in environment variables');
+}
+
+const uri = process.env.MONGO_URL;
+const dbName = process.env.DB_NAME;
 
 const client = new MongoClient(uri);
 let db: Db;
