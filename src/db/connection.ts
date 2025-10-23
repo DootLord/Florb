@@ -3,6 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+console.log('Environment Variables:', {
+    MONGO_URL: process.env.MONGO_URL,
+    DB_NAME: process.env.DB_NAME,
+    NODE_ENV: process.env.NODE_ENV
+});
+
 //? Might be a better place for this to live somewhere else?
 if(!process.env.MONGO_URL || !process.env.DB_NAME) {
     throw new Error('MONGO_URL and DB_NAME must be defined in environment variables');

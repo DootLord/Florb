@@ -209,7 +209,8 @@ export class FlorbService {
     }
 
     // Generate multiple florbs
-    async batchGenerateFlorbs(data: BatchGenerateFlorbDto, userId: string): Promise<Florb[]> {
+    //! Crappy placeholder "NO_USER" should never exist! Clean up later!
+    async batchGenerateFlorbs(data: BatchGenerateFlorbDto, userId: string = "NO_USER"): Promise<Florb[]> {
         const availableImages = data.baseImagePaths || await this.getAvailableBaseImages();
         const rarityWeights = data.rarityWeights || DEFAULT_RARITY_WEIGHTS;
         const florbs: Florb[] = [];
