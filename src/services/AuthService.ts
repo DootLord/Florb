@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { prisma } from '../db/prisma.js';
 import { RegisterDto, LoginDto, AuthResponse, VerifyResponse } from '../types/User.js';
 
@@ -21,12 +20,8 @@ export class AuthService {
         const saltRounds = 12;
         const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
 
-        // Generate a UUID for the new user id (DB may also have defaults; explicit is safer here)
-        const id = (crypto as any).randomUUID ? (crypto as any).randomUUID() : crypto.randomBytes(16).toString('hex');
-
         const created = await prisma.users.create({
             data: {
-                id,
                 username: userData.username,
                 password: hashedPassword,
                 created_at: new Date(),
@@ -74,7 +69,7 @@ export class AuthService {
             const user = await prisma.users.findUnique({ where: { id: decoded.userId } });
             if (!user) return { valid: false, message: 'User not found' };
 
-            return { valid: true, username: user.username || undefined };
+            return { valid: true, username: user.username ?? '' };
         } catch (error) {
             return { valid: false, message: 'Invalid or expired token' };
         }

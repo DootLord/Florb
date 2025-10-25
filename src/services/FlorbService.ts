@@ -140,12 +140,12 @@ export class FlorbService {
 
         const florbRecord = await prisma.florbs.create({
             data: {
-                base_image_path: baseImagePath,
+                base_image_path: baseImagePath || '',
                 florb_id: this.generateFlorbId(),
                 rarity,
                 special_effects: specialEffects,
                 gradient_colors: gradient.colors,
-                gradient_direction: gradient.direction,
+                gradient_direction: gradient.direction ?? null,
                 gradient_intensity: gradient.intensity,
                 description: `A ${RARITY_NAMES[rarity].toLowerCase()} rarity florb with ${specialEffects.join(', ').toLowerCase()} effects.`,
                 tags: [RARITY_NAMES[rarity].toLowerCase(), ...specialEffects.map(e => e.toLowerCase())],
@@ -174,14 +174,14 @@ export class FlorbService {
         const gradient = data.gradientConfig || this.generateGradientConfig(data.rarity, (data as any).customColors);
         const florbRecord = await prisma.florbs.create({
             data: {
-                base_image_path: data.baseImagePath,
+                base_image_path: data.baseImagePath || '',
                 florb_id: this.generateFlorbId(),
                 rarity: data.rarity,
                 special_effects: data.specialEffects,
                 gradient_colors: gradient.colors,
-                gradient_direction: gradient.direction,
+                gradient_direction: gradient.direction ?? null,
                 gradient_intensity: gradient.intensity,
-                description: data.description || undefined,
+                description: data.description ?? null,
                 tags: data.tags || [],
                 created_at: new Date(),
                 updated_at: new Date(),
