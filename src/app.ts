@@ -1,3 +1,5 @@
+// Load environment variables from .env early so Prisma and other libs can read DATABASE_URL
+import 'dotenv/config';
 import express from 'express';
 import routes from './routes/index.js';
 
