@@ -1,35 +1,32 @@
-import { connectToDatabase } from "../db/connection.js";
-import type { User, RegisterDto } from "../types/User.js";
-import { RegisterSchema } from "../types/User.js";
-import { ObjectId } from 'mongodb';
+import { RegisterSchema } from '../types/User.js';
+import { prisma } from '../db/prisma.js';
+import crypto from 'crypto';
 
 class UserService {
-    private readonly collectionName = 'users';
-
-    async getAllUsers(): Promise<User[]> {
-        const db = await connectToDatabase();
-        return db.collection<User>(this.collectionName).find().toArray();
+    async getAllUsers(): Promise<any[]> {
+        return prisma.users.findMany();
     }
 
-    async getUserById(id: string): Promise<User | null> {
-        const db = await connectToDatabase();
-        return db.collection<User>(this.collectionName).findOne({ 
-            _id: new ObjectId(id) 
-        });
+    async getUserById(id: string): Promise<any | null> {
+        return prisma.users.findUnique({ where: { id } });
     }
 
-    async createUser(userData: RegisterDto): Promise<User> {
+    async createUser(userData: any): Promise<any> {
         // Validate input with Zod
         const validatedData = RegisterSchema.parse(userData);
-        
-        const db = await connectToDatabase();
-        const user: Omit<User, '_id'> = {
-            ...validatedData,
-            createdAt: new Date()
-        };
-        
-        const result = await db.collection<User>(this.collectionName).insertOne(user as User);
-        return { ...user, _id: result.insertedId };
+
+        const id = (crypto as any).randomUUID ? (crypto as any).randomUUID() : crypto.randomBytes(16).toString('hex');
+
+        const created = await prisma.users.create({
+            data: {
+                id,
+                username: validatedData.username,
+                password: validatedData.password,
+                created_at: new Date(),
+            },
+        });
+
+        return created;
     }
 }
 

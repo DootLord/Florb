@@ -1,21 +1,20 @@
 import { z } from 'zod';
-import { ObjectId } from 'mongodb';
 
-// User schema for authentication
+// User schema for Postgres (UUID id, timestamp created_at)
 export const UserSchema = z.object({
-  _id: z.instanceof(ObjectId).optional(),
+  id: z.string().uuid().optional(),
   username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username too long'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  createdAt: z.date().optional(),
+  created_at: z.date().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;
 
-// Input type (what we send TO the server/database - without _id)
-export type UserInput = Omit<User, '_id'>;
+// Input type (what we send TO the server/database - without id)
+export type UserInput = Omit<User, 'id'>;
 
-// Response type (what we receive FROM the server/database - with _id)
-export type UserResponse = User & { _id: ObjectId };
+// Response type (what we receive FROM the server/database - with id)
+export type UserResponse = User & { id: string };
 
 // Auth request schemas
 export const RegisterSchema = z.object({

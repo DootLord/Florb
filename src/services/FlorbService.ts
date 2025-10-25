@@ -1,5 +1,4 @@
-import { Collection, ObjectId } from 'mongodb';
-import { connectToDatabase } from '../db/connection.js';
+import { prisma } from '../db/prisma.js';
 import {
     RARITY_LEVELS,
     SPECIAL_EFFECTS,
@@ -23,34 +22,35 @@ import { readdir } from 'fs/promises';
 import { join } from 'path';
 
 export class FlorbService {
-    private collection: Collection<Florb> | null = null;
+    // Normalize DB record (Prisma) into app-friendly Florb shape (camelCase)
+    private normalizeFlorbRecord(record: any): Florb {
+        if (!record) return record;
 
-    private async getCollection(): Promise<Collection<Florb>> {
-        if (!this.collection) {
-            const db = await connectToDatabase();
-            this.collection = db.collection<Florb>('florbs');
-        }
-        return this.collection;
-    }
+        const rarity: RarityLevel = (record.rarity as RarityLevel) || 'Common';
 
-    // Normalize florb data to ensure required fields are present
-    private normalizeFlorb(florb: Florb): Florb {
         return {
-            ...florb,
-            rarity: florb.rarity || 'Common',
-            specialEffects: florb.specialEffects || [],
-            gradientConfig: florb.gradientConfig || this.generateGradientConfig(florb.rarity || 'Common'),
-            description: florb.description || '',
-            tags: florb.tags || []
-        };
+            id: record.id,
+            florbId: record.florb_id || undefined,
+            name: record.name || `${RARITY_NAMES[rarity]} Florb`,
+            baseImagePath: record.base_image_path,
+            rarity,
+            specialEffects: (record.special_effects as string[]) || [],
+            gradientConfig: record.gradient_colors ? {
+                colors: record.gradient_colors,
+                direction: record.gradient_direction,
+                intensity: record.gradient_intensity
+            } as GradientConfig : undefined,
+            description: record.description || '',
+            tags: record.tags || [],
+            createdAt: record.created_at ? new Date(record.created_at) : undefined,
+            updatedAt: record.updated_at ? new Date(record.updated_at) : undefined
+        } as Florb;
     }
 
-    // Generate a unique florb ID
     private generateFlorbId(): string {
         return `florb_${randomBytes(8).toString('hex')}`;
     }
 
-    // Generate a random rarity based on weights
     private generateRandomRarity(weights: RarityWeights = DEFAULT_RARITY_WEIGHTS): RarityLevel {
         const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
         const random = Math.random() * totalWeight;
@@ -63,355 +63,254 @@ export class FlorbService {
             }
         }
 
-        return 'Legendary'; // Fallback
+        return 'Legendary';
     }
 
-    // Generate random special effects (with low probability)
     private generateRandomSpecialEffects(): SpecialEffect[] {
         const effects: SpecialEffect[] = [];
-        const effectProbability = 0.15; // 15% chance for any special effect
+        const effectProbability = 0.15;
 
         for (const effect of SPECIAL_EFFECTS) {
-            // Higher rarity effects have lower probability
             let probability = effectProbability;
             if (effect === 'Holo') probability = 0.1;
             if (effect === 'Foil') probability = 0.08;
             if (effect === 'Shimmer') probability = 0.05;
             if (effect === 'Glow') probability = 0.03;
 
-            if (Math.random() < probability) {
-                effects.push(effect);
-            }
+            if (Math.random() < probability) effects.push(effect as SpecialEffect);
         }
 
         return effects.length > 0 ? effects : [];
     }
 
-    // Generate gradient config based on rarity
-    private generateGradientConfig(rarity: RarityLevel, customColors?: string[]): GradientConfig {
+    private generateGradientConfig(rarity: RarityLevel, customColors?: string[]) {
         let colors: string[];
-        
-        if (customColors) {
-            colors = customColors;
-        } else {
-            // Randomly select colors from the rarity's specific color palette
+        if (customColors) colors = customColors;
+        else {
             const rarityPalette = RARITY_COLOR_PALETTES[rarity];
-            const colorCount = Math.min(3 + Math.floor(Math.random() * 3), rarityPalette.length); // 3-5 colors max, limited by palette size
-            
+            const colorCount = Math.min(3 + Math.floor(Math.random() * 3), rarityPalette.length);
             colors = this.getRandomColorsFromPalette(rarityPalette, colorCount);
         }
-        
+
         const directions: Array<'horizontal' | 'vertical' | 'diagonal' | 'radial'> = ['horizontal', 'vertical', 'diagonal', 'radial'];
-        const randomDirection = directions[Math.floor(Math.random() * directions.length)]!;
+        const randomDirection = directions[Math.floor(Math.random() * directions.length)];
 
-        // Higher rarity = higher intensity with more dramatic curve
         const rarityIndex = RARITY_LEVELS.indexOf(rarity);
-        // Use exponential curve for more dramatic difference between rarities
         const intensityBase = 0.2 + (rarityIndex / (RARITY_LEVELS.length - 1)) * 0.8;
-        const intensity = Math.pow(intensityBase, 0.7); // Makes lower rarities even more subtle, higher rarities more intense
+        const intensity = Math.round(Math.pow(intensityBase, 0.7) * 100) / 100;
 
-        return {
-            colors: [...colors],
-            direction: randomDirection,
-            intensity: Math.round(intensity * 100) / 100
-        };
+        return { colors, direction: randomDirection, intensity };
     }
 
-    // Randomly select colors from a specific rarity palette
     private getRandomColorsFromPalette(palette: readonly string[], count: number): string[] {
         const selectedColors: string[] = [];
-        const availableColors = [...palette]; // Create a copy to avoid modifying the original
-        
-        // Ensure we don't request more colors than available
+        const availableColors = [...palette];
         const actualCount = Math.min(count, availableColors.length);
-        
         for (let i = 0; i < actualCount; i++) {
             const randomIndex = Math.floor(Math.random() * availableColors.length);
-            const selectedColor = availableColors[randomIndex];
-            if (selectedColor) {
-                selectedColors.push(selectedColor);
-                // Remove the selected color to avoid duplicates (optional - you can comment this out if you want potential duplicates)
-                availableColors.splice(randomIndex, 1);
-            }
+            const selected = availableColors.splice(randomIndex, 1)[0];
+            if (selected) selectedColors.push(selected);
         }
-        
         return selectedColors;
     }
 
-    // Get available base images by scanning the florb_base directory
     private async getAvailableBaseImages(): Promise<string[]> {
         try {
             const baseImageDir = join(process.cwd(), 'src', 'assets', 'florb_base');
             const files = await readdir(baseImageDir);
-            const imageFiles = files
-                .filter(file => file.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/i))
-                .map(file => `src/assets/florb_base/${file}`);
-            
-            if (imageFiles.length === 0) {
-                console.warn('No image files found in florb_base directory. Using fallback images.');
-                return [
-                    'src/assets/florb_base/default_orb.png',
-                    'src/assets/florb_base/default_crystal.png'
-                ];
-            }
-            
-            console.log(`Found ${imageFiles.length} base images:`, imageFiles);
+            const imageFiles = files.filter(f => f.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/i)).map(f => `src/assets/florb_base/${f}`);
+            if (imageFiles.length === 0) return ['src/assets/florb_base/default_orb.png', 'src/assets/florb_base/default_crystal.png'];
             return imageFiles;
-        } catch (error) {
-            console.warn('Could not read florb_base directory:', error);
-            console.warn('Using fallback base images.');
-            return [
-                'src/assets/florb_base/default_orb.png',
-                'src/assets/florb_base/default_crystal.png'
-            ];
+        } catch (e) {
+            return ['src/assets/florb_base/default_orb.png', 'src/assets/florb_base/default_crystal.png'];
         }
     }
 
-    // Generate a single florb
-    async generateFlorb(data: GenerateFlorbDto, userId: string): Promise<Florb> {
-        const collection = await this.getCollection();
-
-        // Get base image path - either provided or pick randomly
+    // Generate a single florb (creates a template in `florbs` table)
+    async generateFlorb(data: GenerateFlorbDto, _userId?: string): Promise<Florb> {
         let baseImagePath = data.baseImagePath;
         if (!baseImagePath) {
-            const availableImages = await this.getAvailableBaseImages();
-            baseImagePath = availableImages[Math.floor(Math.random() * availableImages.length)]!;
+            const images = await this.getAvailableBaseImages();
+            baseImagePath = images[Math.floor(Math.random() * images.length)];
         }
 
-        // Determine rarity
         const rarity = data.rarity || this.generateRandomRarity();
+        const specialEffects = data.forceSpecialEffect ? [data.forceSpecialEffect] : this.generateRandomSpecialEffects();
+        const gradient = data.customGradient || this.generateGradientConfig(rarity);
 
-        // Generate special effects
-        const specialEffects = data.forceSpecialEffect
-            ? [data.forceSpecialEffect]
-            : this.generateRandomSpecialEffects();
+        const florbRecord = await prisma.florbs.create({
+            data: {
+                base_image_path: baseImagePath,
+                florb_id: this.generateFlorbId(),
+                rarity,
+                special_effects: specialEffects,
+                gradient_colors: gradient.colors,
+                gradient_direction: gradient.direction,
+                gradient_intensity: gradient.intensity,
+                description: `A ${RARITY_NAMES[rarity].toLowerCase()} rarity florb with ${specialEffects.join(', ').toLowerCase()} effects.`,
+                tags: [RARITY_NAMES[rarity].toLowerCase(), ...specialEffects.map(e => e.toLowerCase())],
+                created_at: new Date(),
+                updated_at: new Date(),
+            }
+        });
 
-        // Generate gradient config
-        const gradientConfig = data.customGradient || this.generateGradientConfig(rarity);
-
-        // Create the florb
-        const florb: Omit<Florb, '_id'> = {
-            userId,
-            florbId: this.generateFlorbId(),
-            name: `${RARITY_NAMES[rarity]} Florb`,
-            baseImagePath,
-            rarity,
-            specialEffects,
-            gradientConfig,
-            description: `A ${RARITY_NAMES[rarity].toLowerCase()} rarity florb with ${specialEffects.join(', ').toLowerCase()} effects.`,
-            tags: [RARITY_NAMES[rarity].toLowerCase(), ...specialEffects.map(e => e.toLowerCase())],
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-
-        const result = await collection.insertOne(florb);
-        return this.normalizeFlorb({ ...florb, _id: result.insertedId });
+        return this.normalizeFlorbRecord(florbRecord);
     }
 
-    // Generate multiple florbs
-    //! Crappy placeholder "NO_USER" should never exist! Clean up later!
-    async batchGenerateFlorbs(data: BatchGenerateFlorbDto, userId: string = "NO_USER"): Promise<Florb[]> {
+    async batchGenerateFlorbs(data: BatchGenerateFlorbDto, userId: string = 'NO_USER'): Promise<Florb[]> {
         const availableImages = data.baseImagePaths || await this.getAvailableBaseImages();
         const rarityWeights = data.rarityWeights || DEFAULT_RARITY_WEIGHTS;
-        const florbs: Florb[] = [];
-
+        const results: Florb[] = [];
         for (let i = 0; i < data.count; i++) {
-            const randomImagePath = availableImages[Math.floor(Math.random() * availableImages.length)]!;
+            const img = availableImages[Math.floor(Math.random() * availableImages.length)];
             const rarity = this.generateRandomRarity(rarityWeights);
-
-            const generateData: GenerateFlorbDto = {
-                baseImagePath: randomImagePath,
-                rarity
-            };
-
-            const florb = await this.generateFlorb(generateData, userId);
-            florbs.push(florb);
+            const florb = await this.generateFlorb({ baseImagePath: img, rarity }, userId);
+            results.push(florb);
         }
-
-        return florbs;
+        return results;
     }
 
-    // Create a custom florb
-    async createFlorb(data: CreateFlorbDto, userId: string): Promise<Florb> {
-        const collection = await this.getCollection();
-
-        const florb: Omit<Florb, '_id'> = {
-            userId,
-            ...data,
-            florbId: this.generateFlorbId(),
-            gradientConfig: data.gradientConfig || this.generateGradientConfig(
-                data.rarity,
-                data.customColors
-            ),
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-
-        const result = await collection.insertOne(florb);
-        return this.normalizeFlorb({ ...florb, _id: result.insertedId });
+    async createFlorb(data: CreateFlorbDto, _userId?: string): Promise<Florb> {
+        const gradient = data.gradientConfig || this.generateGradientConfig(data.rarity, (data as any).customColors);
+        const florbRecord = await prisma.florbs.create({
+            data: {
+                base_image_path: data.baseImagePath,
+                florb_id: this.generateFlorbId(),
+                rarity: data.rarity,
+                special_effects: data.specialEffects,
+                gradient_colors: gradient.colors,
+                gradient_direction: gradient.direction,
+                gradient_intensity: gradient.intensity,
+                description: data.description || undefined,
+                tags: data.tags || [],
+                created_at: new Date(),
+                updated_at: new Date(),
+            }
+        });
+        return this.normalizeFlorbRecord(florbRecord);
     }
 
-    // Get all florbs with pagination
-    async getAllFlorbs(page = 1, limit = 20, rarity?: RarityLevel): Promise<{ florbs: Florb[], total: number, page: number, totalPages: number }> {
-        const collection = await this.getCollection();
+    async getAllFlorbs(page = 1, limit = 20, rarity?: RarityLevel) {
         const skip = (page - 1) * limit;
-
-        const filter = rarity ? { rarity } : {};
+        const where: any = {};
+        if (rarity) where.rarity = rarity;
 
         const [florbs, total] = await Promise.all([
-            collection.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
-            collection.countDocuments(filter)
+            prisma.florbs.findMany({ where, orderBy: { created_at: 'desc' }, skip, take: limit }),
+            prisma.florbs.count({ where })
         ]);
 
         return {
-            florbs: florbs.map(this.normalizeFlorb.bind(this)),
+            florbs: florbs.map(this.normalizeFlorbRecord.bind(this)),
             total,
             page,
             totalPages: Math.ceil(total / limit)
         };
     }
 
-    // Get florb by ID
     async getFlorbById(id: string): Promise<Florb | null> {
-        const collection = await this.getCollection();
-        const florb = await collection.findOne({ _id: new ObjectId(id) });
-        return florb ? this.normalizeFlorb(florb) : null;
+        const record = await prisma.florbs.findUnique({ where: { id } });
+        return record ? this.normalizeFlorbRecord(record) : null;
     }
 
-    // Get florb by florb ID
     async getFlorbByFlorbId(florbId: string): Promise<Florb | null> {
-        const collection = await this.getCollection();
-        const florb = await collection.findOne({ florbId });
-        return florb ? this.normalizeFlorb(florb) : null;
+        const record = await prisma.florbs.findFirst({ where: { florb_id: florbId } });
+        return record ? this.normalizeFlorbRecord(record) : null;
     }
 
-    // Update florb
     async updateFlorb(id: string, data: UpdateFlorbDto): Promise<Florb | null> {
-        const collection = await this.getCollection();
-
-        // Only include defined properties in the update
-        const updateData: Partial<Florb> = {
-            updatedAt: new Date()
-        };
-
-        if (data.name !== undefined) updateData.name = data.name;
+        const updateData: any = { updated_at: new Date() };
         if (data.rarity !== undefined) updateData.rarity = data.rarity;
-        if (data.specialEffects !== undefined) updateData.specialEffects = data.specialEffects;
-        if (data.gradientConfig !== undefined) updateData.gradientConfig = data.gradientConfig;
-        if (data.customColors !== undefined) updateData.customColors = data.customColors;
+        if (data.specialEffects !== undefined) updateData.special_effects = data.specialEffects;
+        if (data.gradientConfig !== undefined) {
+            updateData.gradient_colors = data.gradientConfig.colors;
+            updateData.gradient_direction = data.gradientConfig.direction;
+            updateData.gradient_intensity = data.gradientConfig.intensity;
+        }
+        if ((data as any).customColors !== undefined) updateData.gradient_colors = (data as any).customColors;
         if (data.description !== undefined) updateData.description = data.description;
         if (data.tags !== undefined) updateData.tags = data.tags;
 
-        const result = await collection.findOneAndUpdate(
-            { _id: new ObjectId(id) },
-            { $set: updateData },
-            { returnDocument: 'after' }
-        );
-
-        return result ? this.normalizeFlorb(result) : null;
+        const updated = await prisma.florbs.update({ where: { id }, data: updateData });
+        return this.normalizeFlorbRecord(updated);
     }
 
-    // Delete florb
     async deleteFlorb(id: string): Promise<boolean> {
-        const collection = await this.getCollection();
-        const result = await collection.deleteOne({ _id: new ObjectId(id) });
-        return result.deletedCount > 0;
+        try {
+            await prisma.florbs.delete({ where: { id } });
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
-    // Get florbs by rarity
     async getFlorbsByRarity(rarity: RarityLevel): Promise<Florb[]> {
-        const collection = await this.getCollection();
-        const florbs = await collection.find({ rarity }).sort({ createdAt: -1 }).toArray();
-        return florbs.map(this.normalizeFlorb.bind(this));
+        const records = await prisma.florbs.findMany({ where: { rarity }, orderBy: { created_at: 'desc' } });
+        return records.map(this.normalizeFlorbRecord.bind(this));
     }
 
-    // Get florbs with special effects
     async getFlorbsWithEffect(effect: SpecialEffect): Promise<Florb[]> {
-        const collection = await this.getCollection();
-        const florbs = await collection.find({ specialEffects: effect }).sort({ createdAt: -1 }).toArray();
-        return florbs.map(this.normalizeFlorb.bind(this));
+        // Prisma JSON contains queries vary by provider; fetch and filter in JS for correctness
+    const records = await prisma.florbs.findMany({ orderBy: { created_at: 'desc' } });
+    return records.filter((r: any) => Array.isArray(r.special_effects) && r.special_effects.includes(effect)).map(this.normalizeFlorbRecord.bind(this));
     }
 
-    // Get rarity distribution statistics
     async getRarityStats(): Promise<Record<RarityLevel, number>> {
-        const collection = await this.getCollection();
-        const pipeline = [
-            {
-                $group: {
-                    _id: '$rarity',
-                    count: { $sum: 1 }
-                }
-            }
-        ];
-
-        const results = await collection.aggregate(pipeline).toArray();
-        const stats: Record<string, number> = {};
-
-        // Initialize all rarities with 0
-        RARITY_LEVELS.forEach(rarity => {
-            stats[rarity] = 0;
-        });
-
-        // Fill in actual counts
-        results.forEach(result => {
-            stats[result._id] = result.count;
-        });
-
-        return stats as Record<RarityLevel, number>;
+        const groups = await (prisma as any).florbs.groupBy({ by: ['rarity'], _count: { _all: true } });
+        const stats: Record<RarityLevel, number> = {
+            Common: 0,
+            Rare: 0,
+            Epic: 0,
+            Legendary: 0
+        };
+        for (const g of groups) {
+            if (g.rarity) stats[g.rarity as RarityLevel] = g._count._all || 0;
+        }
+        return stats;
     }
 
-    // Get list of available base images
     async getBaseImagesList(): Promise<string[]> {
-        return await this.getAvailableBaseImages();
+        return this.getAvailableBaseImages();
     }
 
-    // Get rarity name mappings
     async getRarityNameMappings(): Promise<Record<RarityLevel, string>> {
         return RARITY_NAMES;
     }
 
-    // Get all placed florbs on the world map
+    // Get all placed florbs on the world map (joins template florb data)
     async getPlacedFlorbs(): Promise<Florb[]> {
-        const collection = await this.getCollection();
-        const florbs = await collection.find({
-            latitude: { $exists: true },
-            longitude: { $exists: true }
-        }).sort({ placedAt: -1 }).toArray();
-        return florbs.map(this.normalizeFlorb.bind(this));
+        const placed = await prisma.placed_florbs.findMany({ include: { florbs: true }, orderBy: { created_at: 'desc' } });
+        // Map to Florb-like objects by combining placement + template
+        return placed.map((p: any) => {
+            const template = p.florbs;
+            const normalized = this.normalizeFlorbRecord(template || {});
+            // attach placement info
+            return { ...normalized, placedAt: p.created_at ? new Date(p.created_at) : undefined, userId: p.user_id } as Florb;
+        });
     }
 
-    // Get florbs by user ID with pagination
-    async getUserFlorbs(userId: string, page = 1, limit = 20): Promise<{ florbs: Florb[], total: number, page: number, totalPages: number }> {
-        const collection = await this.getCollection();
+    // Get florbs placed by a user (pagination)
+    async getUserFlorbs(userId: string, page = 1, limit = 20) {
         const skip = (page - 1) * limit;
-
-        const filter = { userId };
-
-        const [florbs, total] = await Promise.all([
-            collection.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
-            collection.countDocuments(filter)
+        const [placements, total] = await Promise.all([
+            prisma.placed_florbs.findMany({ where: { user_id: userId }, include: { florbs: true }, orderBy: { created_at: 'desc' }, skip, take: limit }),
+            prisma.placed_florbs.count({ where: { user_id: userId } })
         ]);
 
-        return {
-            florbs: florbs.map(this.normalizeFlorb.bind(this)),
-            total,
-            page,
-            totalPages: Math.ceil(total / limit)
-        };
-    }
-
-    // Get user florb count
-    async getUserFlorbCount(userId: string): Promise<number> {
-        const collection = await this.getCollection();
-        return await collection.countDocuments({ userId });
-    }
-
-    // Get user rare florb count (Rare, Epic, Legendary)
-    async getUserRareFlorbCount(userId: string): Promise<number> {
-        const collection = await this.getCollection();
-        return await collection.countDocuments({ 
-            userId, 
-            rarity: { $in: ['Rare', 'Epic', 'Legendary'] } 
+        const florbs = placements.map((p: any) => {
+            const normalized = this.normalizeFlorbRecord(p.florbs || {});
+            return { ...normalized, placedAt: p.created_at ? new Date(p.created_at) : undefined, userId: p.user_id } as Florb;
         });
+
+        return { florbs, total, page, totalPages: Math.ceil(total / limit) };
+    }
+
+    async getUserFlorbCount(userId: string): Promise<number> {
+        return prisma.placed_florbs.count({ where: { user_id: userId } });
+    }
+
+    async getUserRareFlorbCount(userId: string): Promise<number> {
+        // Count placements whose template has a high rarity
+        return prisma.placed_florbs.count({ where: { user_id: userId, florbs: { rarity: { in: ['Rare', 'Epic', 'Legendary'] } } } });
     }
 }

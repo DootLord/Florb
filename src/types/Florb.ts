@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { ObjectId } from 'mongodb';
 
 // Enum-like constants for rarity levels (ordered from common to mythic)
 export const RARITY_LEVELS = [
@@ -53,8 +52,7 @@ export const RARITY_GATHERING_EFFECTS = {
 
 // Resource node schema
 export const ResourceNodeSchema = z.object({
-  _id: z.instanceof(ObjectId).optional(),
-  id: z.string(),
+  id: z.string().optional(),
   position: z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)]), // [latitude, longitude]
   type: z.enum(RESOURCE_TYPES),
   amount: z.number().min(0),
@@ -63,10 +61,10 @@ export const ResourceNodeSchema = z.object({
 export type ResourceNode = z.infer<typeof ResourceNodeSchema>;
 
 // Input type (what we send TO the server/database - without _id)
-export type ResourceNodeInput = Omit<ResourceNode, '_id'>;
+export type ResourceNodeInput = Omit<ResourceNode, 'id'>;
 
-// Response type (what we receive FROM the server/database - with _id)
-export type ResourceNodeResponse = ResourceNode & { _id: ObjectId };
+// Response type (what we receive FROM the server/database - with id)
+export type ResourceNodeResponse = ResourceNode & { id: string };
 
 // Gradient configuration
 export const GradientConfigSchema = z.object({
@@ -77,8 +75,7 @@ export const GradientConfigSchema = z.object({
 
 // Placed Florb schema (for world map)
 export const PlacedFlorbSchema = z.object({
-  _id: z.instanceof(ObjectId).optional(),
-  id: z.string(),
+  id: z.string().optional(),
   userId: z.string(),
   florbData: z.object({
     florbId: z.string(),
@@ -89,11 +86,11 @@ export const PlacedFlorbSchema = z.object({
     gradientConfig: GradientConfigSchema.optional(),
   }),
   position: z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)]), // [latitude, longitude]
-  placedAt: z.string(), // ISO date string
+  placedAt: z.date(),
   gatheringRadius: z.number().min(0),
   duration: z.number().min(0), // in hours
   effectiveness: z.number().min(0), // multiplier
-  lastGathered: z.string().optional(), // ISO date string
+  lastGathered: z.date().optional(),
   totalGathered: z.object({
     crystal: z.number().min(0),
     energy: z.number().min(0),
@@ -104,14 +101,14 @@ export const PlacedFlorbSchema = z.object({
 export type PlacedFlorb = z.infer<typeof PlacedFlorbSchema>;
 
 // Input type (what we send TO the server/database - without _id)
-export type PlacedFlorbInput = Omit<PlacedFlorb, '_id'>;
+export type PlacedFlorbInput = Omit<PlacedFlorb, 'id'>;
 
-// Response type (what we receive FROM the server/database - with _id)
-export type PlacedFlorbResponse = PlacedFlorb & { _id: ObjectId };
+// Response type (what we receive FROM the server/database - with id)
+export type PlacedFlorbResponse = PlacedFlorb & { id: string };
 
 // Player resources schema
 export const PlayerResourcesSchema = z.object({
-  _id: z.instanceof(ObjectId).optional(),
+  id: z.string().optional(),
   userId: z.string(),
   crystal: z.number().min(0),
   energy: z.number().min(0),
@@ -122,21 +119,21 @@ export const PlayerResourcesSchema = z.object({
 export type PlayerResources = z.infer<typeof PlayerResourcesSchema>;
 
 // Input type (what we send TO the server/database - without _id)
-export type PlayerResourcesInput = Omit<PlayerResources, '_id'>;
+export type PlayerResourcesInput = Omit<PlayerResources, 'id'>;
 
-// Response type (what we receive FROM the server/database - with _id)
-export type PlayerResourcesResponse = PlayerResources & { _id: ObjectId };
+// Response type (what we receive FROM the server/database - with id)
+export type PlayerResourcesResponse = PlayerResources & { id: string };
 
 // Gathering analytics schema
 export const GatheringAnalyticsSchema = z.object({
-  _id: z.instanceof(ObjectId).optional(),
+  id: z.string().optional(),
   userId: z.string(),
   gathered: z.object({
     crystal: z.number().min(0),
     energy: z.number().min(0),
     metal: z.number().min(0),
   }),
-  timestamp: z.string(), // ISO date string
+  timestamp: z.date(),
 });
 
 export type GatheringAnalytics = z.infer<typeof GatheringAnalyticsSchema>;
@@ -170,8 +167,8 @@ export const UpdateFlorbSchema = z.object({
 
 // Full florb schema (includes database fields)
 export const FlorbSchema = CreateFlorbSchema.extend({
-  _id: z.instanceof(ObjectId).optional(),
-  userId: z.string(), // User who owns this florb
+  id: z.string().optional(),
+  userId: z.string().optional(), // User who owns this florb (optional - may be placed via placed_florbs)
   florbId: z.string().optional(), // Unique identifier for the florb
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
