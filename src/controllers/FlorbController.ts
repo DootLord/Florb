@@ -96,11 +96,15 @@ export class FlorbController extends BaseController {
         return;
       }
 
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      return this.florbService.getFlorbsByCollectionId(req.user.userId).then(result => {
+        res.json({ florbs: result });
+      });
 
-      const result = await this.florbService.getUserFlorbs(req.user.userId, page, limit);
-      res.json({ florbs: result.florbs });
+      // const page = parseInt(req.query.page as string) || 1;
+      // const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+
+      // const result = await this.florbService.getUserFlorbs(req.user.userId, page, limit);
+      // res.json({ florbs: result.florbs });
     } catch (error) {
       this.handleError(res, error, 'Failed to retrieve user florbs');
     }

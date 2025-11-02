@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma.js';
+import { collectionsWhereInput } from '../generated/prisma/models.js';
 import {
     RARITY_LEVELS,
     SPECIAL_EFFECTS,
@@ -301,6 +302,40 @@ export class FlorbService {
             // attach placement info
             return { ...normalized, placedAt: p.created_at ? new Date(p.created_at) : undefined, userId: p.user_id } as Florb;
         });
+    }
+
+    /**
+     * Provides the florbs associated with a specific collection.
+     * Defaults to the user's is_default collection if no collectionId is provided.
+     * @param userId
+     * @param collectionId 
+     */
+    async getFlorbsByCollectionId(userId: string, collectionId?: string): Promise<Florb[]> {
+        const collectionQuery: collectionsWhereInput = {
+            user_id: userId,
+
+        }
+
+        if (collectionId) {
+            collectionQuery.id = collectionId;
+        } else {
+            collectionQuery.is_default = true;
+        }
+
+        const collection = await prisma.collections.findFirst({ where: { user_id: userId } });
+
+        if (!collection) {
+            throw new Error('No collection found for user');
+            return [];
+        }
+
+        const florbs = await prisma.florbs.findMany({
+            where: {
+                collection_id: collection.id
+            }
+        })
+
+        return florbs.map(this.normalizeFlorbRecord.bind(this));
     }
 
     // Get florbs placed by a user (pagination)
