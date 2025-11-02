@@ -127,7 +127,7 @@ export class FlorbService {
     }
 
     // Generate a single florb (creates a template in `florbs` table)
-    async generateFlorb(data: GenerateFlorbDto, _userId?: string): Promise<Florb> {
+    async generateFlorb(data: GenerateFlorbDto, userId: string): Promise<Florb> {
         let baseImagePath = data.baseImagePath;
         if (!baseImagePath) {
             const images = await this.getAvailableBaseImages();
@@ -137,6 +137,18 @@ export class FlorbService {
         const rarity = data.rarity || this.generateRandomRarity();
         const specialEffects = data.forceSpecialEffect ? [data.forceSpecialEffect] : this.generateRandomSpecialEffects();
         const gradient = data.customGradient || this.generateGradientConfig(rarity);
+        let florbCollectionId: string | undefined = undefined;
+
+        if (userId) {
+            const usersCollection = await prisma.collections.findFirst({ where: { user_id: userId } });
+            if (usersCollection) {
+                florbCollectionId = usersCollection.id;
+            }
+        }
+
+        if (!florbCollectionId) {
+            throw new Error('User does not have an associated collection to assign the florb to.');
+        }
 
         const florbRecord = await prisma.florbs.create({
             data: {
@@ -149,10 +161,12 @@ export class FlorbService {
                 gradient_intensity: gradient.intensity,
                 description: `A ${RARITY_NAMES[rarity].toLowerCase()} rarity florb with ${specialEffects.join(', ').toLowerCase()} effects.`,
                 tags: [RARITY_NAMES[rarity].toLowerCase(), ...specialEffects.map(e => e.toLowerCase())],
+                collection_id: florbCollectionId,
                 created_at: new Date(),
                 updated_at: new Date(),
             }
         });
+
 
         return this.normalizeFlorbRecord(florbRecord);
     }
@@ -251,8 +265,8 @@ export class FlorbService {
 
     async getFlorbsWithEffect(effect: SpecialEffect): Promise<Florb[]> {
         // Prisma JSON contains queries vary by provider; fetch and filter in JS for correctness
-    const records = await prisma.florbs.findMany({ orderBy: { created_at: 'desc' } });
-    return records.filter((r: any) => Array.isArray(r.special_effects) && r.special_effects.includes(effect)).map(this.normalizeFlorbRecord.bind(this));
+        const records = await prisma.florbs.findMany({ orderBy: { created_at: 'desc' } });
+        return records.filter((r: any) => Array.isArray(r.special_effects) && r.special_effects.includes(effect)).map(this.normalizeFlorbRecord.bind(this));
     }
 
     async getRarityStats(): Promise<Record<RarityLevel, number>> {
