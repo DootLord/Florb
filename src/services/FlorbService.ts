@@ -15,7 +15,6 @@ import type {
     BatchGenerateFlorbDto,
     RarityLevel,
     SpecialEffect,
-    GradientConfig,
     RarityWeights
 } from '../types/Florb.js';
 import { randomBytes } from 'crypto';
@@ -23,31 +22,6 @@ import { readdir } from 'fs/promises';
 import { join } from 'path';
 
 export class FlorbService {
-    // Normalize DB record (Prisma) into app-friendly Florb shape (camelCase)
-    private normalizeFlorbRecord(record: any): Florb {
-        if (!record) return record;
-
-        const rarity: RarityLevel = (record.rarity as RarityLevel) || 'Common';
-
-        return {
-            id: record.id,
-            florbId: record.florb_id || undefined,
-            name: record.name || `${RARITY_NAMES[rarity]} Florb`,
-            baseImagePath: record.base_image_path,
-            rarity,
-            specialEffects: (record.special_effects as string[]) || [],
-            gradientConfig: record.gradient_colors ? {
-                colors: record.gradient_colors,
-                direction: record.gradient_direction,
-                intensity: record.gradient_intensity
-            } as GradientConfig : undefined,
-            description: record.description || '',
-            tags: record.tags || [],
-            createdAt: record.created_at ? new Date(record.created_at) : undefined,
-            updatedAt: record.updated_at ? new Date(record.updated_at) : undefined
-        } as Florb;
-    }
-
     private generateFlorbId(): string {
         return `florb_${randomBytes(8).toString('hex')}`;
     }
@@ -169,7 +143,7 @@ export class FlorbService {
         });
 
 
-        return this.normalizeFlorbRecord(florbRecord);
+        return florbRecord;
     }
 
     async batchGenerateFlorbs(data: BatchGenerateFlorbDto, userId: string = 'NO_USER'): Promise<Florb[]> {
@@ -202,7 +176,7 @@ export class FlorbService {
                 updated_at: new Date(),
             }
         });
-        return this.normalizeFlorbRecord(florbRecord);
+        return florbRecord;
     }
 
     async getAllFlorbs(page = 1, limit = 20, rarity?: RarityLevel) {
@@ -216,7 +190,7 @@ export class FlorbService {
         ]);
 
         return {
-            florbs: florbs.map(this.normalizeFlorbRecord.bind(this)),
+            florbs: florbs,
             total,
             page,
             totalPages: Math.ceil(total / limit)
@@ -225,12 +199,12 @@ export class FlorbService {
 
     async getFlorbById(id: string): Promise<Florb | null> {
         const record = await prisma.florbs.findUnique({ where: { id } });
-        return record ? this.normalizeFlorbRecord(record) : null;
+        return record;
     }
 
     async getFlorbByFlorbId(florbId: string): Promise<Florb | null> {
         const record = await prisma.florbs.findFirst({ where: { florb_id: florbId } });
-        return record ? this.normalizeFlorbRecord(record) : null;
+        return record;
     }
 
     async updateFlorb(id: string, data: UpdateFlorbDto): Promise<Florb | null> {
@@ -247,7 +221,7 @@ export class FlorbService {
         if (data.tags !== undefined) updateData.tags = data.tags;
 
         const updated = await prisma.florbs.update({ where: { id }, data: updateData });
-        return this.normalizeFlorbRecord(updated);
+        return updated;
     }
 
     async deleteFlorb(id: string): Promise<boolean> {
@@ -261,13 +235,13 @@ export class FlorbService {
 
     async getFlorbsByRarity(rarity: RarityLevel): Promise<Florb[]> {
         const records = await prisma.florbs.findMany({ where: { rarity }, orderBy: { created_at: 'desc' } });
-        return records.map(this.normalizeFlorbRecord.bind(this));
+        return records;
     }
 
     async getFlorbsWithEffect(effect: SpecialEffect): Promise<Florb[]> {
         // Prisma JSON contains queries vary by provider; fetch and filter in JS for correctness
         const records = await prisma.florbs.findMany({ orderBy: { created_at: 'desc' } });
-        return records.filter((r: any) => Array.isArray(r.special_effects) && r.special_effects.includes(effect)).map(this.normalizeFlorbRecord.bind(this));
+        return records.filter((r: any) => Array.isArray(r.special_effects) && r.special_effects.includes(effect));
     }
 
     async getRarityStats(): Promise<Record<RarityLevel, number>> {
@@ -298,9 +272,8 @@ export class FlorbService {
         // Map to Florb-like objects by combining placement + template
         return placed.map((p: any) => {
             const template = p.florbs;
-            const normalized = this.normalizeFlorbRecord(template || {});
             // attach placement info
-            return { ...normalized, placedAt: p.created_at ? new Date(p.created_at) : undefined, userId: p.user_id } as Florb;
+            return { ...template, placedAt: p.created_at, userId: p.user_id } as Florb;
         });
     }
 
@@ -335,7 +308,7 @@ export class FlorbService {
             }
         })
 
-        return florbs.map(this.normalizeFlorbRecord.bind(this));
+        return florbs;
     }
 
     // Get florbs placed by a user (pagination)
@@ -347,7 +320,7 @@ export class FlorbService {
         ]);
 
         const florbs = placements.map((p: any) => {
-            const normalized = this.normalizeFlorbRecord(p.florbs || {});
+            const normalized = p.florbs;
             return { ...normalized, placedAt: p.created_at ? new Date(p.created_at) : undefined, userId: p.user_id } as Florb;
         });
 

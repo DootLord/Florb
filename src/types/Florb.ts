@@ -165,19 +165,21 @@ export const UpdateFlorbSchema = z.object({
   expiresAt: z.date().optional(),
 });
 
-// Full florb schema (includes database fields)
-export const FlorbSchema = CreateFlorbSchema.extend({
-  id: z.string().optional(),
-  userId: z.string().optional(), // User who owns this florb (optional - may be placed via placed_florbs)
-  florbId: z.string().optional(), // Unique identifier for the florb
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-  generatedImageUrl: z.string().optional(), // URL to the generated image if cached
-  // World map coordinates for placement
-  latitude: z.number().min(-90).max(90).optional(),
-  longitude: z.number().min(-180).max(180).optional(),
-  placedAt: z.date().optional(), // When the florb was placed on the map
-  expiresAt: z.date().optional(), // When the florb expires based on rarity
+// Full florb schema (matches Prisma florbs model - snake_case)
+export const FlorbSchema = z.object({
+  id: z.string(),
+  base_image_path: z.string().nullable(),
+  florb_id: z.string().nullable(),
+  rarity: z.string().nullable(),
+  gradient_colors: z.any().nullable(), // Json
+  gradient_direction: z.string().nullable(),
+  gradient_intensity: z.number().nullable(),
+  description: z.string().nullable(),
+  tags: z.any().nullable(), // Json
+  created_at: z.date().nullable(),
+  updated_at: z.date().nullable(),
+  collection_id: z.string().nullable(),
+  special_effects: z.array(z.string()),
 });
 
 // Schema for florb generation request
