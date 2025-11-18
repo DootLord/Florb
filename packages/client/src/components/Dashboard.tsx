@@ -245,7 +245,7 @@ function Dashboard({ username, onLogout }: DashboardProps) {
                       onClick={() => handleFlorbClick(florb)}
                     />
                     <div className="florb-info">
-                      <h4>{florb.name}</h4>
+                      <h4>{florb.florb_id}</h4>
                       <p>Rarity: {florb.rarity}</p>
                     </div>
                   </div>

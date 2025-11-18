@@ -1,3 +1,4 @@
 node_modules
-/.turbo/*
-packages/server/.turbo/turbo-dev.log
+.turbo/daemon/**
+packages/server/.turbo/**
+
