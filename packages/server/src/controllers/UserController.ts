@@ -14,7 +14,7 @@ class UserController extends BaseController {
         this.userService = new UserService();
         this.florbService = new FlorbService();
         this.worldMapService = new WorldMapService();
-        
+
         // Bind methods to preserve 'this' context
         this.getAllUsers = this.getAllUsers.bind(this);
         this.getUserById = this.getUserById.bind(this);
@@ -35,14 +35,14 @@ class UserController extends BaseController {
     async getUserById(req: Request, res: Response): Promise<void> {
         try {
             const { id } = req.params;
-            
+
             if (!id) {
                 res.status(400).json({ error: 'User ID is required' });
                 return;
             }
-            
+
             const user = await this.userService.getUserById(id);
-            
+
             if (user) {
                 this.handleSuccess(res, user);
             } else {
@@ -60,9 +60,9 @@ class UserController extends BaseController {
         } catch (error) {
             // Handle Zod validation errors
             if (error instanceof Error && error.name === 'ZodError') {
-                res.status(400).json({ 
-                    error: 'Validation failed', 
-                    details: JSON.parse(error.message) 
+                res.status(400).json({
+                    error: 'Validation failed',
+                    details: JSON.parse(error.message)
                 });
                 return;
             }
@@ -114,10 +114,11 @@ class UserController extends BaseController {
             }
 
             const limit = Math.min(parseInt(req.query.limit as string) || 6, 20);
-            
-            const result = await this.florbService.getUserFlorbs(req.user.userId, 1, limit);
 
-            this.handleSuccess(res, { florbs: result.florbs });
+            return this.florbService.getFlorbsByCollectionId(req.user.userId, undefined, limit).then(result => {
+                res.json({ florbs: result });
+            });
+
         } catch (error) {
             this.handleError(res, error, 'Failed to get user florbs');
         }

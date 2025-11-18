@@ -67,8 +67,8 @@ function Dashboard({ username, onLogout }: DashboardProps) {
             let transformedFlorb = { ...florb };
             
             // Transform the baseImagePath to match our component expectations
-            if (transformedFlorb.baseImagePath) {
-              let transformedPath = transformedFlorb.baseImagePath;
+            if (transformedFlorb.base_image_path) {
+              let transformedPath = transformedFlorb.base_image_path;
               
               // Handle different possible API path formats
               if (transformedPath.startsWith('src/assets/florb_base/')) {
@@ -85,7 +85,7 @@ function Dashboard({ username, onLogout }: DashboardProps) {
                 transformedPath = '/' + transformedPath;
               }
               
-              transformedFlorb.baseImagePath = transformedPath;
+              transformedFlorb.base_image_path = transformedPath;
             }
             
             // Ensure rarity has a default value
@@ -94,8 +94,8 @@ function Dashboard({ username, onLogout }: DashboardProps) {
             }
             
             // Ensure specialEffects is an array
-            if (!transformedFlorb.specialEffects) {
-              transformedFlorb.specialEffects = [];
+            if (!transformedFlorb.special_effects) {
+              transformedFlorb.special_effects = [];
             }
             
             return transformedFlorb;
@@ -235,7 +235,7 @@ function Dashboard({ username, onLogout }: DashboardProps) {
               <div className="recent-florbs-grid">
                 {recentFlorbs.map((florb, index) => (
                   <div 
-                    key={florb.florbId} 
+                    key={florb.florb_id} 
                     className="recent-florb-card"
                     style={{ '--florb-index': index } as React.CSSProperties}
                   >

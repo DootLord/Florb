@@ -280,10 +280,12 @@ export class FlorbService {
     /**
      * Provides the florbs associated with a specific collection.
      * Defaults to the user's is_default collection if no collectionId is provided.
+     * Sorted by "created_at" descending.
      * @param userId
      * @param collectionId 
+     * @param limit
      */
-    async getFlorbsByCollectionId(userId: string, collectionId?: string): Promise<Florb[]> {
+    async getFlorbsByCollectionId(userId: string, collectionId?: string, limit?: number): Promise<Florb[]> {
         const collectionQuery: collectionsWhereInput = {
             user_id: userId,
 
@@ -305,14 +307,18 @@ export class FlorbService {
         const florbs = await prisma.florbs.findMany({
             where: {
                 collection_id: collection.id
-            }
-        })
+            },
+            orderBy: {
+                created_at: 'desc'
+            },
+            ...(limit ? { take: limit } : {})
+        });
 
         return florbs;
     }
 
-    // Get florbs placed by a user (pagination)
-    async getUserFlorbs(userId: string, page = 1, limit = 20) {
+    // Get a user's default collection's florbs
+    async getUsersPlacedFlorbs(userId: string, page = 1, limit = 20) {
         const skip = (page - 1) * limit;
         const [placements, total] = await Promise.all([
             prisma.placed_florbs.findMany({ where: { user_id: userId }, include: { florbs: true }, orderBy: { created_at: 'desc' }, skip, take: limit }),
