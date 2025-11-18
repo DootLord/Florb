@@ -1,0 +1,12 @@
+FROM node:18-alpine
+WORKDIR /app
+# Docker is "layer" based. Each command creates a new layer.
+# To optimize caching, we first copy only the files needed for.
+# If we had "COPY . ." first, then any change to any file would
+# invalidate the cache for all subsequent layers, including npm install!!
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5173
+# The `--host 0.0.0.0` is needed so that vite listens on all interfaces
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"] 

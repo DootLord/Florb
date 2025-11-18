@@ -1,0 +1,858 @@
+.world-map-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at center, #0a0a0a 0%, #000000 100%),
+    linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  position: relative;
+}
+
+.world-map-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 30% 70%, rgba(0, 255, 136, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 70% 30%, rgba(136, 0, 255, 0.03) 0%, transparent 50%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.01) 1px,
+      transparent 2px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      rgba(255, 255, 255, 0.01) 1px,
+      transparent 2px,
+      transparent 20px
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.resource-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%),
+    rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.resource-amount {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.world-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%),
+    rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  margin: 1rem;
+  margin-bottom: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  z-index: 10;
+}
+
+.world-map-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 255, 136, 0.6) 20%,
+    rgba(136, 0, 255, 0.6) 50%,
+    rgba(255, 0, 136, 0.6) 80%,
+    transparent 100%
+  );
+  z-index: 1;
+}
+
+.world-map-title {
+  color: #ffffff;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+  z-index: 2;
+}
+
+.map-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.resource-counters {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.radius-toggle {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%),
+    rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 2;
+}
+
+.radius-toggle:hover {
+  background:
+    linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(136, 0, 255, 0.1) 50%, rgba(255, 0, 136, 0.1) 100%),
+    rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.radius-toggle.active {
+  background:
+    linear-gradient(135deg, rgba(0, 255, 136, 0.8) 0%, rgba(136, 0, 255, 0.8) 50%, rgba(255, 0, 136, 0.8) 100%);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.3);
+}
+
+.back-button {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%),
+    rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 2;
+}
+
+.back-button:hover {
+  background:
+    linear-gradient(135deg, rgba(255, 107, 107, 0.8) 0%, rgba(238, 90, 36, 0.8) 100%);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.3);
+  transform: translateY(-2px);
+}
+
+.map-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  z-index: 1;
+}
+
+.florb-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100%;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%),
+    rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.5rem;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+  border-radius: 12px 0 0 12px;
+}
+
+.florb-sidebar h3 {
+  margin: 0 0 1.5rem 0;
+  color: #ffffff;
+  font-size: 1.25rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.75rem;
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.florb-inventory {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.florb-inventory-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  cursor: grab;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.005) 100%),
+    rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.florb-inventory-item:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(136, 0, 255, 0.05) 50%, rgba(255, 0, 136, 0.05) 100%),
+    rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.florb-inventory-item:active {
+  cursor: grabbing;
+}
+
+.florb-inventory-info {
+  margin-left: 1rem;
+  flex: 1;
+}
+
+.florb-inventory-info h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  color: #ffffff;
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.florb-inventory-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Sidebar Loading and Error States */
+.sidebar-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.sidebar-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.sidebar-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: #d32f2f;
+}
+
+.sidebar-error .error-details {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.sidebar-error .retry-button {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.sidebar-error .retry-button:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+}
+
+.no-florbs {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  font-style: italic;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.leaflet-map {
+  height: 100%;
+  width: 100%;
+  flex: 1;
+}
+
+/* Override default Leaflet styles for better integration */
+.leaflet-container {
+  background: #1a1a1a !important;
+  z-index: 1 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #2d1b69;
+  border: 4px solid #4a148c;
+  border-radius: 0;
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #6a1b9a;
+  backdrop-filter: none;
+  position: relative;
+  font-family: 'Courier New', monospace;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.leaflet-popup-content-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: repeating-linear-gradient(
+    45deg,
+    #000 0px,
+    #000 2px,
+    #4a148c 2px,
+    #4a148c 4px
+  );
+  z-index: -1;
+  border-radius: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+  color: #e1bee7;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  text-shadow: 1px 1px 0px #000;
+}
+
+.leaflet-popup-tip {
+  background: #2d1b69;
+  border: 2px solid #4a148c;
+  box-shadow: 0 0 0 1px #000;
+}
+
+/* Ensure Leaflet controls don't interfere */
+.leaflet-control-container {
+  z-index: 100 !important;
+}
+
+/* Florb popup styling */
+.florb-popup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  min-width: 200px;
+}
+
+.florb-info {
+  text-align: center;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #0a0a0a 100%);
+  border: 2px solid #00ffff;
+  border-radius: 0;
+  padding: 1rem;
+  position: relative;
+  font-family: 'Courier New', monospace;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  box-shadow:
+    0 0 0 1px #000,
+    inset 0 0 0 1px #00ffff,
+    0 0 20px rgba(0, 255, 255, 0.3),
+    inset 0 0 30px rgba(255, 0, 255, 0.1);
+  animation: cyber-glow 2s ease-in-out infinite alternate;
+}
+
+.florb-info::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: repeating-linear-gradient(
+    90deg,
+    #00ffff 0px,
+    #00ffff 1px,
+    transparent 1px,
+    transparent 10px
+  );
+  z-index: -1;
+  opacity: 0.3;
+  animation: data-stream 1.5s linear infinite;
+}
+
+.florb-info h4 {
+  margin: 0 0 0.75rem 0;
+  color: #00ffff;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow:
+    0 0 5px #00ffff,
+    1px 1px 0px #000,
+    -1px -1px 0px #000,
+    1px -1px 0px #000,
+    -1px 1px 0px #000;
+  background: linear-gradient(135deg, #0a0a0a 0%, #001a1a 100%);
+  padding: 0.5rem;
+  border: 1px solid #00ffff;
+  border-radius: 0;
+  display: inline-block;
+  position: relative;
+  animation: terminal-flicker 3s ease-in-out infinite;
+}
+
+.florb-info p {
+  margin: 0.25rem 0;
+  color: #ff00ff;
+  font-size: 0.8rem;
+  text-shadow: 0 0 3px #ff00ff;
+  opacity: 0.9;
+}
+
+.gathering-stats {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #1b1b1b;
+  border: 3px solid #4a148c;
+  border-radius: 0;
+  font-size: 0.7rem;
+  position: relative;
+}
+
+.gathering-stats::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 4px,
+    rgba(255, 255, 255, 0.1) 4px,
+    rgba(255, 255, 255, 0.1) 8px
+  );
+  pointer-events: none;
+}
+
+.gathering-stats p {
+  margin: 0.25rem 0;
+  font-size: 0.65rem;
+  color: #81c784;
+  text-shadow: 1px 1px 0px #000;
+  font-weight: bold;
+}
+
+.gathering-stats p:first-child {
+  color: #ffeb3b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 2px solid #4a148c;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Resource popup styling */
+.resource-popup {
+  padding: 1rem;
+  text-align: center;
+  min-width: 150px;
+  background: #1b5e20;
+  border: 4px solid #4caf50;
+  border-radius: 0;
+  position: relative;
+  font-family: 'Courier New', monospace;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #66bb6a;
+}
+
+.resource-popup::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: repeating-linear-gradient(
+    45deg,
+    #000 0px,
+    #000 2px,
+    #4caf50 2px,
+    #4caf50 4px
+  );
+  z-index: -1;
+}
+
+.resource-popup h4 {
+  margin: 0 0 0.5rem 0;
+  color: #81c784;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow:
+    1px 1px 0px #000,
+    -1px -1px 0px #000,
+    1px -1px 0px #000,
+    -1px 1px 0px #000;
+  background: #0d3c0d;
+  padding: 0.5rem;
+  border: 2px solid #81c784;
+  border-radius: 0;
+  display: inline-block;
+}
+
+.resource-popup p {
+  margin: 0.25rem 0;
+  font-size: 0.7rem;
+  color: #c8e6c9;
+  text-shadow: 1px 1px 0px #000;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0;
+  border: 1px solid #4caf50;
+}
+
+/* Instructions */
+.map-instructions {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  z-index: 100;
+}
+
+.map-instructions p {
+  margin: 0.25rem 0;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .world-map-header {
+    padding: 0.25rem 0.5rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 100px;
+  }
+
+  .world-map-title {
+    font-size: 1rem;
+  }
+
+  .map-controls {
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+  }
+
+  .resource-counters {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .resource-item {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.3rem;
+  }
+
+  .map-stats {
+    font-size: 0.7rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+  }
+
+  .map-stats span {
+    text-align: center;
+  }
+
+  .florb-selector-modal {
+    padding: 1.5rem;
+    width: 95%;
+  }
+
+  .florb-selection-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .map-instructions {
+    bottom: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    padding: 0.75rem;
+  }
+}
+
+/* Custom marker icons for different resource types */
+.resource-shleep {
+  background: #4caf50;
+}
+
+.resource-mlorp {
+  background: #2196f3;
+}
+
+.resource-spoonch {
+  background: #ff9800;
+}
+
+/* Florb map markers */
+.florb-map-marker {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px;
+}
+
+.florb-map-marker:hover {
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Florb special effects for map markers */
+.florb-map-marker.florb-holo {
+  position: relative;
+}
+
+.florb-map-marker.florb-holo::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #ffeaa7, #dda0dd, #98d8c8);
+  background-size: 400% 400%;
+  animation: holo-shift 3s ease-in-out infinite;
+  z-index: -1;
+}
+
+.florb-map-marker.florb-foil {
+  position: relative;
+  overflow: hidden;
+}
+
+.florb-map-marker.florb-foil::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: foil-shine 2s linear infinite;
+  transform: rotate(45deg);
+}
+
+.florb-map-marker.florb-shimmer {
+  position: relative;
+}
+
+.florb-map-marker.florb-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer-wave 2s ease-in-out infinite;
+}
+
+.florb-map-marker.florb-glow {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.florb-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Animations for Florb effects */
+@keyframes holo-shift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes foil-shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+@keyframes shimmer-wave {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes cyber-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px #000,
+      inset 0 0 0 1px #00ffff,
+      0 0 20px rgba(0, 255, 255, 0.3),
+      inset 0 0 30px rgba(255, 0, 255, 0.1);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px #000,
+      inset 0 0 0 1px #ff00ff,
+      0 0 25px rgba(255, 0, 255, 0.4),
+      inset 0 0 40px rgba(0, 255, 255, 0.1);
+  }
+}
+
+@keyframes data-stream {
+  0% {
+    background-position-x: 0px;
+  }
+  100% {
+    background-position-x: 10px;
+  }
+}
+
+@keyframes terminal-flicker {
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 
+      0 0 5px #00ffff,
+      1px 1px 0px #000,
+      -1px -1px 0px #000,
+      1px -1px 0px #000,
+      -1px 1px 0px #000;
+  }
+  5% {
+    opacity: 0.8;
+    text-shadow: 
+      0 0 3px #00ffff,
+      1px 1px 0px #000,
+      -1px -1px 0px #000,
+      1px -1px 0px #000,
+      -1px 1px 0px #000;
+  }
+}

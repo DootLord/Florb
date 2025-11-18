@@ -1,0 +1,18 @@
+# Build the app
+FROM node:20-alpine AS build
+WORKDIR /app
+# Docker is "layer" based. Each command creates a new layer.
+# To optimize caching, we first copy only the files needed for.
+# If we had "COPY . ." first, then any change to any file would
+# invalidate the cache for all subsequent layers, including npm install!!
+COPY package*.json ./
+# npm `clean-install`
+RUN npm ci 
+COPY . .
+RUN npm run build
+
+# Serve the static files (Hopefully!)
+FROM nginx:1.27-alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist/ /usr/share/nginx/html/
+EXPOSE 80

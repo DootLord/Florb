@@ -1,0 +1,24 @@
+<!-- This is a placeholder SVG for the Florb base image -->
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="dots" patternUnits="userSpaceOnUse" width="20" height="20">
+      <circle cx="10" cy="10" r="2" fill="#666"/>
+    </pattern>
+  </defs>
+  
+  <!-- Base rounded rectangle -->
+  <rect x="10" y="10" width="180" height="180" rx="20" ry="20" fill="#333" stroke="#555" stroke-width="2"/>
+  
+  <!-- Pattern overlay -->
+  <rect x="10" y="10" width="180" height="180" rx="20" ry="20" fill="url(#dots)" opacity="0.3"/>
+  
+  <!-- Center circle -->
+  <circle cx="100" cy="100" r="60" fill="#444" stroke="#666" stroke-width="2"/>
+  
+  <!-- Inner details -->
+  <circle cx="100" cy="100" r="40" fill="#555"/>
+  <circle cx="100" cy="100" r="20" fill="#666"/>
+  
+  <!-- Highlight -->
+  <ellipse cx="85" cy="85" rx="15" ry="8" fill="#777" opacity="0.6"/>
+</svg>
